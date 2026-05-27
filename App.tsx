@@ -22,6 +22,7 @@ import type { Screen } from './src/types';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash');
+  const [splashFinished, setSplashFinished] = useState(false);
   const [rideSeconds, setRideSeconds] = useState(0);
   const { isLoading, isAuthenticated } = useConvexAuth();
   const authReady = AUTH_BYPASS_ENABLED || !isLoading;
@@ -34,28 +35,43 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!authReady) {
+    const timeoutId = setTimeout(() => {
+      setSplashFinished(true);
+    }, 2000);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    if (!splashFinished || !authReady) {
       return;
     }
 
-    if (canUseApp && (screen === 'splash' || screen === 'login')) {
+    if (screen === 'splash') {
+      setScreen(canUseApp ? 'home' : 'login');
+      return;
+    }
+
+    if (canUseApp && screen === 'login') {
       setScreen('home');
       return;
     }
 
-    if (!canUseApp && screen !== 'splash' && screen !== 'login') {
+    if (!canUseApp && screen !== 'login') {
       setScreen('login');
     }
-  }, [authReady, canUseApp, screen]);
+  }, [authReady, canUseApp, screen, splashFinished]);
 
   const content = useMemo(() => {
+    if (!splashFinished || screen === 'splash') {
+      return <SplashScreen />;
+    }
+
     if (!authReady) {
       return <LoadingScreen />;
     }
 
     switch (screen) {
-      case 'splash':
-        return <SplashScreen go={go} />;
       case 'login':
         return <LoginScreen go={go} />;
       case 'home':
@@ -81,7 +97,7 @@ export default function App() {
       default:
         return <HomeScreen go={go} />;
     }
-  }, [screen, rideSeconds, authReady]);
+  }, [screen, rideSeconds, authReady, splashFinished]);
 
   return (
     <SafeAreaView style={styles.app}>
