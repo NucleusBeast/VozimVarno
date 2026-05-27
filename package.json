@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@auth/core": "^0.37.0",
+    "@convex-dev/auth": "^0.0.92",
     "@expo/metro-runtime": "~6.1.2",
+    "convex": "^1.39.1",
     "expo": "~54.0.0",
+    "expo-secure-store": "^56.0.4",
     "expo-status-bar": "~3.0.9",
     "lucide-react-native": "^1.16.0",
     "react": "19.1.0",
@@ -21,7 +25,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "backend": "npm --prefix backend run dev",
+    "backend:deploy": "npm --prefix backend run deploy"
   },
   "private": true
 }

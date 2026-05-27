@@ -1,0 +1,16 @@
+{
+  "name": "vozimvarno-backend",
+  "private": true,
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy"
+  },
+  "dependencies": {
+    "@auth/core": "0.37.0",
+    "@convex-dev/auth": "^0.0.92",
+    "convex": "^1.39.1"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.2"
+  }
+}
