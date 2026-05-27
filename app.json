@@ -20,6 +20,22 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "VozimVarno potrebuje kamero za zaznavanje voznje.",
+          "microphonePermission": "VozimVarno potrebuje mikrofon za zaznavanje dogodkov med voznjo."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "VozimVarno potrebuje lokacijo za merjenje poti in hitrosti."
+        }
+      ]
+    ]
   }
 }
