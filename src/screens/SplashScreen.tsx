@@ -1,12 +1,11 @@
 import { Text, View } from 'react-native';
 import { Car, ShieldCheck } from 'lucide-react-native';
 
-import { PhoneFrame } from '../components/layout';
 import { styles } from '../styles';
 
 export function SplashScreen() {
   return (
-    <PhoneFrame dark>
+    <View style={styles.splashFrame}>
       <View style={styles.splashBody}>
         <View style={styles.brandMark}>
           <Car size={56} color="#ffffff" strokeWidth={2.6} />
@@ -18,6 +17,6 @@ export function SplashScreen() {
         <Text style={styles.splashSubtitle}>Vozim odgovorno.{'\n'}Prihodnost varno.</Text>
         <View style={styles.homeIndicator} />
       </View>
-    </PhoneFrame>
+    </View>
   );
 }

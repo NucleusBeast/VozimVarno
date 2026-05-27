@@ -22,6 +22,14 @@ export const styles = StyleSheet.create({
   phoneDark: {
     backgroundColor: BLUE_DARK,
   },
+  splashFrame: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: BLUE_DARK,
+  },
   loadingBody: {
     flex: 1,
     alignItems: 'center',
@@ -261,6 +269,9 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  checkCircleDisabled: {
+    borderColor: RED,
+  },
   checkLabel: {
     color: TEXT,
     fontSize: 14,
@@ -270,6 +281,18 @@ export const styles = StyleSheet.create({
     color: MUTED,
     fontSize: 12,
     marginTop: 2,
+  },
+  checkStatusError: {
+    color: RED,
+    fontWeight: '700',
+  },
+  permissionHint: {
+    color: RED,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 14,
   },
   flexSpacer: {
     flex: 1,
@@ -711,6 +734,14 @@ export const styles = StyleSheet.create({
   },
   settingsRowText: {
     flex: 1,
+    minWidth: 0,
+  },
+  settingsTrailing: {
+    minWidth: 42,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   settingsTitle: {
     color: TEXT,
@@ -739,9 +770,19 @@ export const styles = StyleSheet.create({
     fontWeight: '900',
     textTransform: 'uppercase',
   },
+  switchFrame: {
+    width: 62,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  settingsSwitch: {
+    transform: [{ scaleX: 0.86 }, { scaleY: 0.86 }],
+  },
   segmentedControl: {
-    minWidth: 118,
-    minHeight: 36,
+    width: 118,
+    height: 36,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#cfd8e4',

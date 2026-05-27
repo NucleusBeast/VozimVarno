@@ -58,7 +58,7 @@ export function SettingsRow({
         <Text style={styles.settingsTitle}>{title}</Text>
         {subtitle ? <Text style={styles.settingsSubtitle}>{subtitle}</Text> : null}
       </View>
-      {trailing ?? <ChevronRight size={18} color={MUTED} />}
+      <View style={styles.settingsTrailing}>{trailing ?? <ChevronRight size={18} color={MUTED} />}</View>
     </Pressable>
   );
 }

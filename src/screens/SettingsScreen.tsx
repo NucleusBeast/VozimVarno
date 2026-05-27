@@ -37,11 +37,9 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
           subtitle={notificationsEnabled ? 'Vklopljena' : 'Izklopljena'}
           Icon={Bell}
           trailing={
-            <Switch
+            <SettingsSwitch
               value={notificationsEnabled}
               onValueChange={(value) => update({ notificationsEnabled: value })}
-              trackColor={{ true: BLUE, false: '#cfd7e3' }}
-              thumbColor="#ffffff"
             />
           }
         />
@@ -83,23 +81,44 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
           title="Kamera"
           subtitle={cameraEnabled ? 'Dovoljeno' : 'Izklopljeno'}
           Icon={Camera}
-          trailing={<Switch value={cameraEnabled} onValueChange={(value) => update({ cameraEnabled: value })} trackColor={{ true: BLUE, false: '#cfd7e3' }} thumbColor="#ffffff" />}
+          trailing={<SettingsSwitch value={cameraEnabled} onValueChange={(value) => update({ cameraEnabled: value })} />}
         />
         <SettingsRow
           title="GPS"
           subtitle={gpsEnabled ? 'Dovoljeno' : 'Izklopljeno'}
           Icon={MapPin}
-          trailing={<Switch value={gpsEnabled} onValueChange={(value) => update({ gpsEnabled: value })} trackColor={{ true: BLUE, false: '#cfd7e3' }} thumbColor="#ffffff" />}
+          trailing={<SettingsSwitch value={gpsEnabled} onValueChange={(value) => update({ gpsEnabled: value })} />}
         />
         <SettingsRow
           title="Mikrofon"
           subtitle={microphoneEnabled ? 'Dovoljeno' : 'Izklopljeno'}
           Icon={Mic}
-          trailing={<Switch value={microphoneEnabled} onValueChange={(value) => update({ microphoneEnabled: value })} trackColor={{ true: BLUE, false: '#cfd7e3' }} thumbColor="#ffffff" />}
+          trailing={<SettingsSwitch value={microphoneEnabled} onValueChange={(value) => update({ microphoneEnabled: value })} />}
         />
         <SettingsRow title="O aplikaciji" subtitle="VozimVarno v1.0.0" Icon={Info} />
       </View>
     </PhoneFrame>
+  );
+}
+
+function SettingsSwitch({
+  value,
+  onValueChange,
+}: {
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
+  return (
+    <View style={styles.switchFrame}>
+      <Switch
+        style={styles.settingsSwitch}
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ true: BLUE, false: '#cfd7e3' }}
+        thumbColor="#ffffff"
+        ios_backgroundColor="#cfd7e3"
+      />
+    </View>
   );
 }
 
