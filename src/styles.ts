@@ -723,4 +723,48 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 8,
   },
+  settingsSectionLabelWrap: {
+    minHeight: 42,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#f6f8fb',
+    borderBottomWidth: 1,
+    borderBottomColor: LINE,
+  },
+  settingsSectionLabel: {
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  segmentedControl: {
+    minWidth: 118,
+    minHeight: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#cfd8e4',
+    flexDirection: 'row',
+    overflow: 'hidden',
+    backgroundColor: '#ffffff',
+  },
+  segmentOption: {
+    flex: 1,
+    minWidth: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  segmentOptionActive: {
+    backgroundColor: BLUE,
+  },
+  segmentText: {
+    color: TEXT,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  segmentTextActive: {
+    color: '#ffffff',
+  },
 });
