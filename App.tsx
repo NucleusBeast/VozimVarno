@@ -1,6 +1,6 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native';
 
 import { NavigationProvider } from './src/navigation';
@@ -37,7 +37,7 @@ export default function App() {
   }, []);
 
   function renderScreen(screen: Screen, params: NavParams, go: (s: Screen, p?: NavParams) => void) {
-    if (!splashFinished || screen === 'splash') return <SplashScreen />;
+    if (!splashFinished) return <SplashScreen />;
     if (!authReady) return <LoadingScreen />;
 
     // Auth guard
@@ -84,7 +84,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.app}>
-      <StatusBar style={currentScreen === 'splash' ? 'light' : 'dark'} />
+      <StatusBar style={!splashFinished ? 'light' : 'dark'} />
       <NavigationProvider
         initialScreen="splash"
         onScreenChange={setCurrentScreen}
