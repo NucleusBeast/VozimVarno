@@ -7,6 +7,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { BottomNav, PhoneFrame } from '../components/layout';
 import { SettingsRow, Stat } from '../components/metrics';
 import { BLUE, MUTED, RED, TEXT } from '../constants';
+import { getRideStats } from '../services/storage/rideStorage';
 import { styles } from '../styles';
 import type { GoToScreen } from '../types';
 import { api } from '../../backend/convex/_generated/api';
@@ -19,15 +20,18 @@ export function ProfileScreen({ go }: { go: GoToScreen }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [stats, setStats] = useState({ totalRides: 0, avgScore: 0, totalDistanceKm: 0 });
+
+  useEffect(() => {
+    getRideStats().then(setStats);
+  }, []);
 
   const displayName = viewer?.name ?? viewer?.email?.split('@')[0] ?? 'Voznik';
   const email = viewer?.email ?? 'E-posta ni na voljo';
   const avatarLetter = displayName.trim().charAt(0).toUpperCase() || 'V';
-  const memberSince = useMemo(() => {
-    if (!viewer?.createdAt) {
-      return 'Clan';
-    }
 
+  const memberSince = useMemo(() => {
+    if (!viewer?.createdAt) return 'Clan';
     return `Clan od ${new Intl.DateTimeFormat('sl-SI', {
       month: 'long',
       year: 'numeric',
@@ -41,7 +45,6 @@ export function ProfileScreen({ go }: { go: GoToScreen }) {
   const saveProfile = async () => {
     setError('');
     setSaving(true);
-
     try {
       await updateProfile({ name });
       setIsEditing(false);
@@ -58,6 +61,7 @@ export function ProfileScreen({ go }: { go: GoToScreen }) {
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{avatarLetter}</Text>
         </View>
+
         {isEditing ? (
           <View style={styles.profileEditBlock}>
             <TextInput
@@ -70,7 +74,12 @@ export function ProfileScreen({ go }: { go: GoToScreen }) {
             />
             {error ? <Text style={styles.profileError}>{error}</Text> : null}
             <View style={styles.profileActions}>
-              <Pressable accessibilityLabel="Shrani profil" style={styles.profileActionButton} disabled={saving} onPress={saveProfile}>
+              <Pressable
+                accessibilityLabel="Shrani profil"
+                style={styles.profileActionButton}
+                disabled={saving}
+                onPress={saveProfile}
+              >
                 <Check size={18} color={BLUE} strokeWidth={2.5} />
               </Pressable>
               <Pressable
@@ -89,18 +98,28 @@ export function ProfileScreen({ go }: { go: GoToScreen }) {
         ) : (
           <View style={styles.profileNameRow}>
             <Text style={styles.profileName}>{displayName}</Text>
-            <Pressable accessibilityLabel="Uredi profil" style={styles.profileEditButton} onPress={() => setIsEditing(true)}>
+            <Pressable
+              accessibilityLabel="Uredi profil"
+              style={styles.profileEditButton}
+              onPress={() => setIsEditing(true)}
+            >
               <Pencil size={16} color={TEXT} />
             </Pressable>
           </View>
         )}
+
         <Text style={styles.profileEmail}>{email}</Text>
         <Text style={styles.profileSince}>{memberSince}</Text>
+
         <View style={styles.profileStats}>
-          <Stat label="Skupno vozenj" value="0" />
-          <Stat label="Povprecna ocena" value="-" />
-          <Stat label="Skupna razdalja" value="0 km" />
+          <Stat label="Skupno vozenj" value={String(stats.totalRides)} />
+          <Stat label="Povprecna ocena" value={stats.totalRides > 0 ? String(stats.avgScore) : '-'} />
+          <Stat
+            label="Skupna razdalja"
+            value={stats.totalRides > 0 ? `${stats.totalDistanceKm} km` : '0 km'}
+          />
         </View>
+
         <View style={styles.settingsList}>
           <SettingsRow title="Dosezki" Icon={Trophy} onPress={() => go('challenges')} />
           <SettingsRow title="Nastavitve" Icon={Settings} onPress={() => go('settings')} />

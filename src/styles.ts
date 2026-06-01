@@ -487,6 +487,13 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 16,
   },
+  emptyState: {
+    textAlign: 'center',
+    color: MUTED,
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 48,
+  },
   historyItem: {
     minHeight: 86,
     borderBottomWidth: 1,

@@ -1,8 +1,9 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native';
 
+import { NavigationProvider } from './src/navigation';
 import { AUTH_BYPASS_ENABLED } from './src/constants';
 import { ActiveRideScreen } from './src/screens/ActiveRideScreen';
 import { ChallengesScreen } from './src/screens/ChallengesScreen';
@@ -18,57 +19,33 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
 import { SummaryScreen } from './src/screens/SummaryScreen';
 import { styles } from './src/styles';
-import type { Screen } from './src/types';
+import type { NavParams, Screen } from './src/types';
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('splash');
   const [splashFinished, setSplashFinished] = useState(false);
   const [rideSeconds, setRideSeconds] = useState(0);
   const { isLoading, isAuthenticated } = useConvexAuth();
   const authReady = AUTH_BYPASS_ENABLED || !isLoading;
   const canUseApp = AUTH_BYPASS_ENABLED || isAuthenticated;
 
-  const go = (next: Screen) => setScreen(next);
-  const startRide = () => {
-    setRideSeconds(0);
-    setScreen('active');
-  };
+  // Track current screen for StatusBar styling
+  const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setSplashFinished(true);
-    }, 2000);
-
-    return () => clearTimeout(timeoutId);
+    const id = setTimeout(() => setSplashFinished(true), 2000);
+    return () => clearTimeout(id);
   }, []);
 
-  useEffect(() => {
-    if (!splashFinished || !authReady) {
-      return;
-    }
+  function renderScreen(screen: Screen, params: NavParams, go: (s: Screen, p?: NavParams) => void) {
+    if (!splashFinished || screen === 'splash') return <SplashScreen />;
+    if (!authReady) return <LoadingScreen />;
 
-    if (screen === 'splash') {
-      setScreen(canUseApp ? 'home' : 'login');
-      return;
-    }
-
-    if (canUseApp && screen === 'login') {
-      setScreen('home');
-      return;
-    }
-
+    // Auth guard
     if (!canUseApp && screen !== 'login') {
-      setScreen('login');
+      return <LoginScreen go={go} />;
     }
-  }, [authReady, canUseApp, screen, splashFinished]);
-
-  const content = useMemo(() => {
-    if (!splashFinished || screen === 'splash') {
-      return <SplashScreen />;
-    }
-
-    if (!authReady) {
-      return <LoadingScreen />;
+    if (canUseApp && screen === 'login') {
+      return <HomeScreen go={go} />;
     }
 
     switch (screen) {
@@ -77,15 +54,21 @@ export default function App() {
       case 'home':
         return <HomeScreen go={go} />;
       case 'prepare':
-        return <PrepareScreen go={go} startRide={startRide} />;
+        return <PrepareScreen go={go} startRide={() => { setRideSeconds(0); go('active'); }} />;
       case 'active':
-        return <ActiveRideScreen go={go} elapsedSeconds={rideSeconds} setElapsedSeconds={setRideSeconds} />;
+        return (
+          <ActiveRideScreen
+            go={go}
+            elapsedSeconds={rideSeconds}
+            setElapsedSeconds={setRideSeconds}
+          />
+        );
       case 'summary':
         return <SummaryScreen go={go} elapsedSeconds={rideSeconds} />;
       case 'history':
         return <HistoryScreen go={go} />;
       case 'details':
-        return <DetailsScreen go={go} />;
+        return <DetailsScreen go={go} rideId={params.rideId} />;
       case 'rating':
         return <RatingScreen go={go} />;
       case 'challenges':
@@ -97,12 +80,17 @@ export default function App() {
       default:
         return <HomeScreen go={go} />;
     }
-  }, [screen, rideSeconds, authReady, splashFinished]);
+  }
 
   return (
     <SafeAreaView style={styles.app}>
-      <StatusBar style={screen === 'splash' ? 'light' : 'dark'} />
-      {content}
+      <StatusBar style={currentScreen === 'splash' ? 'light' : 'dark'} />
+      <NavigationProvider
+        initialScreen="splash"
+        onScreenChange={setCurrentScreen}
+      >
+        {(screen, params, go) => renderScreen(screen, params, go)}
+      </NavigationProvider>
     </SafeAreaView>
   );
 }

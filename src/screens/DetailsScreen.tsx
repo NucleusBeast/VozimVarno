@@ -5,7 +5,7 @@ import { InfoRows, MapCard, MetricCard } from '../components/metrics';
 import { styles } from '../styles';
 import type { GoToScreen } from '../types';
 
-export function DetailsScreen({ go }: { go: GoToScreen }) {
+export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string }) {
   return (
     <PhoneFrame>
       <Header title="Podrobnosti voznje" back="history" go={go} />
