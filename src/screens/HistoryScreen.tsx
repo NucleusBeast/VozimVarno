@@ -73,7 +73,7 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
               <Pressable
                 key={ride.id}
                 style={styles.historyItem}
-                onPress={() => go('details')}
+                onPress={() => go('details', { rideId: ride.id })}
               >
                 <View>
                   <Text style={styles.historyDate}>{formatRideDate(ride.startTime)}</Text>

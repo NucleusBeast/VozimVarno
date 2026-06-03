@@ -81,7 +81,14 @@ export default function App() {
           />
         );
       case 'summary':
-        return <SummaryScreen go={go} ride={completedRide} />;
+        return (
+          <SummaryScreen
+            go={go}
+            ride={completedRide}
+            elapsedSeconds={rideSession.elapsedSeconds}
+            rideId={params.rideId}
+          />
+        );
       case 'history':
         return <HistoryScreen go={go} />;
       case 'details':

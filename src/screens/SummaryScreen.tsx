@@ -1,8 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Header, PhoneFrame } from '../components/layout';
 import { InfoRows, ScoreRing } from '../components/metrics';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { getRideById } from '../services/storage/rideStorage';
+import { getLatestCompletedRide } from '../state/currentRide';
 import { formatDuration } from '../utils/formatDuration';
 import { styles } from '../styles';
 import type { GoToScreen, Ride } from '../types';
@@ -24,8 +27,30 @@ function scoreLabel(score: number): string {
   return 'Priporočamo izboljšave.';
 }
 
-export function SummaryScreen({ go, ride }: { go: GoToScreen; ride: Ride | null }) {
-  if (!ride) {
+type Props = {
+  go: GoToScreen;
+  ride: Ride | null;
+  elapsedSeconds?: number;
+  rideId?: string;
+};
+
+export function SummaryScreen({ go, ride: completedRide, elapsedSeconds = 0, rideId }: Props) {
+  const [storedRide, setStoredRide] = useState<Ride | null>(getLatestCompletedRide());
+
+  useEffect(() => {
+    setStoredRide(completedRide ?? getLatestCompletedRide());
+  }, [completedRide]);
+
+  useEffect(() => {
+    if (!rideId) return;
+    getRideById(rideId).then((ride) => {
+      if (ride) setStoredRide(ride);
+    });
+  }, [rideId]);
+
+  const ride = completedRide ?? storedRide;
+
+  if (!ride && elapsedSeconds <= 0) {
     return (
       <PhoneFrame>
         <Header title="Povzetek voznje" go={go} />
@@ -39,23 +64,26 @@ export function SummaryScreen({ go, ride }: { go: GoToScreen; ride: Ride | null 
     );
   }
 
-  const accelerations = ride.incidents.filter((i) => i.type === 'hard_acceleration').length;
-  const brakings = ride.incidents.filter((i) => i.type === 'hard_braking').length;
-  const turns = ride.incidents.filter((i) => i.type === 'sharp_turn').length;
+  const displayDuration = ride?.durationSeconds ?? elapsedSeconds;
+  const incidents = ride?.incidents ?? [];
+  const points = ride?.points ?? [];
+  const accelerations = incidents.filter((i) => i.type === 'hard_acceleration').length;
+  const brakings = incidents.filter((i) => i.type === 'hard_braking').length;
+  const turns = incidents.filter((i) => i.type === 'sharp_turn').length;
 
   return (
     <PhoneFrame>
       <Header title="Povzetek voznje" go={go} />
       <View style={styles.content}>
         <View style={styles.centerBlock}>
-          <ScoreRing value={ride.score} size={122} stroke={9} />
-          <Text style={styles.successText}>{scoreLabel(ride.score)}</Text>
+          <ScoreRing value={ride?.score ?? 0} size={122} stroke={9} />
+          <Text style={styles.successText}>{scoreLabel(ride?.score ?? 0)}</Text>
         </View>
         <InfoRows
           rows={[
-            ['Razdalja', formatDistance(ride.distanceKm)],
-            ['Čas voznje', formatDuration(ride.durationSeconds)],
-            ['Povprečna hitrost', formatSpeed(ride.avgSpeedKmh)],
+            ['Razdalja', ride ? formatDistance(ride.distanceKm) : 'N/A'],
+            ['Čas voznje', formatDuration(displayDuration)],
+            ['Povprečna hitrost', ride ? formatSpeed(ride.avgSpeedKmh) : 'N/A'],
           ]}
         />
         <Text style={styles.sectionTitle}>Doseženi dogodki</Text>
@@ -65,6 +93,8 @@ export function SummaryScreen({ go, ride }: { go: GoToScreen; ride: Ride | null 
             ['Pospeski', String(accelerations)],
             ['Zaviranja', String(brakings)],
             ['Ostro zavijanje', String(turns)],
+            ['GPS tocke', `${points.length}`],
+            ['Najvisja hitrost', ride ? formatSpeed(ride.maxSpeedKmh) : 'N/A'],
           ]}
         />
         <View style={styles.flexSpacer} />
