@@ -1,8 +1,8 @@
 import { Text, TextInput, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
 
-import { MUTED } from '../constants';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
+import { useTheme } from '../theme/ThemeContext';
 
 export function FormField({
   label,
@@ -17,6 +17,8 @@ export function FormField({
   onChangeText: (value: string) => void;
   secure?: boolean;
 }) {
+  const styles = useAppStyles();
+  const { colors } = useTheme();
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -24,7 +26,7 @@ export function FormField({
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor="#a1adbf"
+          placeholderTextColor={colors.textMuted}
           secureTextEntry={secure}
           autoCapitalize="none"
           autoCorrect={false}
@@ -32,7 +34,7 @@ export function FormField({
           value={value}
           onChangeText={onChangeText}
         />
-        {secure ? <Lock size={16} color={MUTED} /> : null}
+        {secure ? <Lock size={16} color={colors.textMuted} /> : null}
       </View>
     </View>
   );

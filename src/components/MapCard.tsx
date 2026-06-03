@@ -2,10 +2,11 @@ import { View } from 'react-native';
 import Svg, { Circle, Path, Polyline } from 'react-native-svg';
 
 import { GREEN } from '../constants';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 import type { RidePoint } from '../types';
 
 export function MapCard({ points = [] }: { points?: RidePoint[] }) {
+  const styles = useAppStyles();
   const routePoints = normalizeRoutePoints(points);
   const polyline = routePoints.length > 1
     ? routePoints.map((point) => `${point.x},${point.y}`).join(' ')

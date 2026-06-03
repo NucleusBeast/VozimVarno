@@ -5,7 +5,7 @@ import { Header, PhoneFrame } from '../components/layout';
 import { InfoRows, MapCard, MetricCard } from '../components/metrics';
 import { getRideById } from '../services/storage/rideStorage';
 import { formatDuration } from '../utils/formatDuration';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 import type { GoToScreen, Ride } from '../types';
 
 function formatRideDate(timestamp: number): string {
@@ -20,6 +20,7 @@ function formatRideDate(timestamp: number): string {
 
 export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string }) {
   const [ride, setRide] = useState<Ride | null>(null);
+  const styles = useAppStyles();
 
   useEffect(() => {
     if (!rideId) return;
@@ -44,7 +45,8 @@ export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string 
         <InfoRows
           compact
           rows={ride ? [
-            ['Incidenti', `${incidents.length}`],
+            ['Incidenti skupaj', `${incidents.length}`],
+            ['Hrup opozorila', `${incidents.filter((i) => i.type === 'noise_alert').length}`],
             ['GPS tocke', `${points.length}`],
             ['Najvisja hitrost', `${ride.maxSpeedKmh} km/h`],
           ] : [

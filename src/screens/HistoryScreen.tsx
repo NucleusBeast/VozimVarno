@@ -5,7 +5,7 @@ import { BottomNav, Header, PhoneFrame } from '../components/layout';
 import { ScoreRing } from '../components/metrics';
 import { getRideSummaries } from '../services/storage/rideStorage';
 import { rideHistory } from '../data';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 import type { GoToScreen, RideSummary } from '../types';
 import { formatDuration } from '../utils/formatDuration';
 
@@ -25,6 +25,7 @@ function formatRideDate(timestamp: number): string {
 export function HistoryScreen({ go }: { go: GoToScreen }) {
   const [storedRides, setStoredRides] = useState<RideSummary[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('vse');
+  const styles = useAppStyles();
 
   useEffect(() => {
     getRideSummaries().then(setStoredRides);
@@ -67,7 +68,7 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
       {hasRealData ? (
         <ScrollView contentContainerStyle={styles.historyList} showsVerticalScrollIndicator={false}>
           {displayRides.length === 0 ? (
-            <Text style={styles.emptyState}>Ni voženj v izbranem obdobju.</Text>
+            <Text style={styles.emptyState}>Ni vozenj v izbranem obdobju.</Text>
           ) : (
             displayRides.map((ride) => (
               <Pressable
@@ -87,7 +88,6 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
           )}
         </ScrollView>
       ) : (
-        // Demo podatki dokler ni pravih voženj
         <ScrollView contentContainerStyle={styles.historyList} showsVerticalScrollIndicator={false}>
           {rideHistory.map((ride) => (
             <Pressable key={ride.date} style={styles.historyItem} onPress={() => go('details')}>

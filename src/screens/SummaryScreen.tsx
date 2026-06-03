@@ -7,7 +7,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { getRideById } from '../services/storage/rideStorage';
 import { getLatestCompletedRide } from '../state/currentRide';
 import { formatDuration } from '../utils/formatDuration';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 import type { GoToScreen, Ride } from '../types';
 
 function formatDistance(km: number): string {
@@ -21,10 +21,10 @@ function formatSpeed(kmh: number): string {
 }
 
 function scoreLabel(score: number): string {
-  if (score >= 90) return 'Odlično!';
+  if (score >= 90) return 'Odlicno!';
   if (score >= 75) return 'Dobro opravljeno!';
   if (score >= 60) return 'Voznja v redu.';
-  return 'Priporočamo izboljšave.';
+  return 'Priporocamo izboljsave.';
 }
 
 type Props = {
@@ -36,6 +36,7 @@ type Props = {
 
 export function SummaryScreen({ go, ride: completedRide, elapsedSeconds = 0, rideId }: Props) {
   const [storedRide, setStoredRide] = useState<Ride | null>(getLatestCompletedRide());
+  const styles = useAppStyles();
 
   useEffect(() => {
     setStoredRide(completedRide ?? getLatestCompletedRide());
@@ -55,7 +56,7 @@ export function SummaryScreen({ go, ride: completedRide, elapsedSeconds = 0, rid
       <PhoneFrame>
         <Header title="Povzetek voznje" go={go} />
         <View style={[styles.content, { alignItems: 'center', justifyContent: 'center' }]}>
-          <Text style={styles.emptyState}>Ni podatkov o tej vožnji.</Text>
+          <Text style={styles.emptyState}>Ni podatkov o tej voznjo.</Text>
           <View style={{ marginTop: 24 }}>
             <PrimaryButton title="Domov" onPress={() => go('home')} />
           </View>
@@ -70,6 +71,7 @@ export function SummaryScreen({ go, ride: completedRide, elapsedSeconds = 0, rid
   const accelerations = incidents.filter((i) => i.type === 'hard_acceleration').length;
   const brakings = incidents.filter((i) => i.type === 'hard_braking').length;
   const turns = incidents.filter((i) => i.type === 'sharp_turn').length;
+  const noises = incidents.filter((i) => i.type === 'noise_alert').length;
 
   return (
     <PhoneFrame>
@@ -82,17 +84,18 @@ export function SummaryScreen({ go, ride: completedRide, elapsedSeconds = 0, rid
         <InfoRows
           rows={[
             ['Razdalja', ride ? formatDistance(ride.distanceKm) : 'N/A'],
-            ['Čas voznje', formatDuration(displayDuration)],
-            ['Povprečna hitrost', ride ? formatSpeed(ride.avgSpeedKmh) : 'N/A'],
+            ['Cas voznje', formatDuration(displayDuration)],
+            ['Povprecna hitrost', ride ? formatSpeed(ride.avgSpeedKmh) : 'N/A'],
           ]}
         />
-        <Text style={styles.sectionTitle}>Doseženi dogodki</Text>
+        <Text style={styles.sectionTitle}>Dosezeni dogodki</Text>
         <InfoRows
           compact
           rows={[
             ['Pospeski', String(accelerations)],
             ['Zaviranja', String(brakings)],
             ['Ostro zavijanje', String(turns)],
+            ['Hrup opozorila', String(noises)],
             ['GPS tocke', `${points.length}`],
             ['Najvisja hitrost', ride ? formatSpeed(ride.maxSpeedKmh) : 'N/A'],
           ]}

@@ -2,11 +2,13 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { ChevronLeft, Clock3, Home, User } from 'lucide-react-native';
 
-import { BLUE, TEXT } from '../constants';
-import { styles } from '../styles';
+import { BLUE } from '../constants';
+import { useAppStyles } from '../styles';
+import { useTheme } from '../theme/ThemeContext';
 import type { GoToScreen, Screen } from '../types';
 
 export function PhoneFrame({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
+  const styles = useAppStyles();
   return <View style={[styles.phone, dark && styles.phoneDark]}>{children}</View>;
 }
 
@@ -21,11 +23,13 @@ export function Header({
   right?: React.ReactNode;
   go: GoToScreen;
 }) {
+  const styles = useAppStyles();
+  const { colors } = useTheme();
   return (
     <View style={styles.header}>
       {back ? (
         <IconButton label="Nazaj" onPress={() => go(back)}>
-          <ChevronLeft size={22} color={TEXT} />
+          <ChevronLeft size={22} color={colors.text} />
         </IconButton>
       ) : (
         <View style={styles.iconSlot} />
@@ -45,6 +49,7 @@ export function IconButton({
   label: string;
   onPress: () => void;
 }) {
+  const styles = useAppStyles();
   return (
     <Pressable accessibilityLabel={label} style={styles.iconButton} onPress={onPress}>
       {children}
@@ -53,6 +58,7 @@ export function IconButton({
 }
 
 export function BottomNav({ active, go }: { active: 'home' | 'history' | 'profile'; go: GoToScreen }) {
+  const styles = useAppStyles();
   const items = [
     { key: 'home', label: 'Domov', Icon: Home, screen: 'home' as Screen },
     { key: 'history', label: 'Zgodovina', Icon: Clock3, screen: 'history' as Screen },

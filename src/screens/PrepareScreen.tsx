@@ -8,7 +8,7 @@ import type { PermissionResponse } from 'expo-modules-core';
 import { Header, PhoneFrame } from '../components/layout';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { BLUE, GREEN, RED } from '../constants';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 import type { GoToScreen } from '../types';
 
 type NativePermission = {
@@ -38,6 +38,7 @@ const initialPermissions: PermissionState = {
 export function PrepareScreen({ go, startRide }: { go: GoToScreen; startRide: () => void }) {
   const [permissions, setPermissions] = useState<PermissionState>(initialPermissions);
   const [isChecking, setIsChecking] = useState(true);
+  const styles = useAppStyles();
 
   const refreshPermissions = useCallback(async () => {
     setIsChecking(true);

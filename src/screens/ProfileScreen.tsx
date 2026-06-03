@@ -6,9 +6,10 @@ import { useMutation, useQuery } from 'convex/react';
 
 import { BottomNav, PhoneFrame } from '../components/layout';
 import { SettingsRow, Stat } from '../components/metrics';
-import { BLUE, MUTED, RED, TEXT } from '../constants';
+import { BLUE, RED } from '../constants';
 import { getRideStats } from '../services/storage/rideStorage';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
+import { useTheme } from '../theme/ThemeContext';
 import type { GoToScreen } from '../types';
 import { api } from '../../backend/convex/_generated/api';
 
@@ -21,6 +22,8 @@ export function ProfileScreen({ go }: { go: GoToScreen }) {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState({ totalRides: 0, avgScore: 0, totalDistanceKm: 0 });
+  const styles = useAppStyles();
+  const { colors } = useTheme();
 
   useEffect(() => {
     getRideStats().then(setStats);
@@ -69,7 +72,7 @@ export function ProfileScreen({ go }: { go: GoToScreen }) {
               value={name}
               onChangeText={setName}
               placeholder="Ime"
-              placeholderTextColor={MUTED}
+              placeholderTextColor={colors.textMuted}
               autoCapitalize="words"
             />
             {error ? <Text style={styles.profileError}>{error}</Text> : null}
@@ -103,7 +106,7 @@ export function ProfileScreen({ go }: { go: GoToScreen }) {
               style={styles.profileEditButton}
               onPress={() => setIsEditing(true)}
             >
-              <Pencil size={16} color={TEXT} />
+              <Pencil size={16} color={colors.text} />
             </Pressable>
           </View>
         )}

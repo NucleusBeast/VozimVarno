@@ -3,10 +3,11 @@ import { Car, Clock3, Gauge, Menu, Settings, Star, Trophy } from 'lucide-react-n
 
 import { Header, IconButton, PhoneFrame, BottomNav } from '../components/layout';
 import { BLUE } from '../constants';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 import type { GoToScreen, IconType, Screen } from '../types';
 
 export function HomeScreen({ go }: { go: GoToScreen }) {
+  const styles = useAppStyles();
   const cards: Array<{ label: string; Icon: IconType; screen: Screen }> = [
     { label: 'Nova voznja', Icon: Car, screen: 'prepare' },
     { label: 'Moje voznje', Icon: Clock3, screen: 'history' },

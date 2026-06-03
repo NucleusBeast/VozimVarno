@@ -3,10 +3,11 @@ import MapView, { Marker, Polyline, type LatLng, type Region } from 'react-nativ
 import Svg, { Circle, Path, Polyline as SvgPolyline } from 'react-native-svg';
 
 import { GREEN } from '../constants';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 import type { RidePoint } from '../types';
 
 export function MapCard({ points = [] }: { points?: RidePoint[] }) {
+  const styles = useAppStyles();
   if (points.length < 2) {
     return <FallbackMapCard />;
   }
@@ -34,6 +35,7 @@ export function MapCard({ points = [] }: { points?: RidePoint[] }) {
 }
 
 function FallbackMapCard() {
+  const styles = useAppStyles();
   return (
     <View style={styles.mapCard}>
       <Svg width="100%" height="100%" viewBox="0 0 260 150">

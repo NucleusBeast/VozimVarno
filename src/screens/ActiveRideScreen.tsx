@@ -7,7 +7,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { GREEN, RED, YELLOW } from '../constants';
 import type { GpsStatus } from '../hooks/useRideSession';
 import type { FatigueResult } from '../services/camera';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 import type { GoToScreen, Incident } from '../types';
 import { formatDuration } from '../utils/formatDuration';
 
@@ -22,8 +22,8 @@ type Props = {
 };
 
 const GPS_LABEL: Record<GpsStatus, string> = {
-  good: 'GPS: Odličen',
-  poor: 'GPS: Slab',
+  good: 'GPS: Odlicen',
+  poor: 'GPS: Slab signal',
   off: 'GPS: Ni signala',
 };
 
@@ -48,6 +48,8 @@ export function ActiveRideScreen({
   fatigueResult,
   onEndRide,
 }: Props) {
+  const styles = useAppStyles();
+
   const accelerations = useMemo(
     () => incidents.filter((i) => i.type === 'hard_acceleration').length,
     [incidents],
@@ -60,8 +62,13 @@ export function ActiveRideScreen({
     () => incidents.filter((i) => i.type === 'sharp_turn').length,
     [incidents],
   );
+  const noiseAlerts = useMemo(
+    () => incidents.filter((i) => i.type === 'noise_alert').length,
+    [incidents],
+  );
 
   const fatigue = fatigueResult ? fatigueInfo(fatigueResult) : null;
+  const noiseColor = noiseAlerts === 0 ? GREEN : noiseAlerts < 3 ? YELLOW : RED;
 
   return (
     <PhoneFrame>
@@ -80,9 +87,16 @@ export function ActiveRideScreen({
           <MetricCard label="Zavoji" value={String(turns)} />
         </View>
 
-        <View style={[styles.gpsRow, fatigue ? { marginBottom: 8 } : undefined]}>
+        <View style={[styles.gpsRow, { marginBottom: 8 }]}>
           <View style={[styles.greenDot, { backgroundColor: GPS_COLOR[gpsStatus] }]} />
           <Text style={styles.gpsText}>{GPS_LABEL[gpsStatus]}</Text>
+        </View>
+
+        <View style={[styles.gpsRow, { marginTop: 0, marginBottom: fatigue ? 8 : 28 }]}>
+          <View style={[styles.greenDot, { backgroundColor: noiseColor }]} />
+          <Text style={styles.gpsText}>
+            {noiseAlerts === 0 ? 'Hrup: Tiho' : `Hrup: ${noiseAlerts} opozorilo${noiseAlerts === 1 ? '' : 'v'}`}
+          </Text>
         </View>
 
         {fatigue ? (

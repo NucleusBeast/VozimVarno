@@ -1,6 +1,6 @@
 import { Pressable, Text } from 'react-native';
 
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 
 export function PrimaryButton({
   title,
@@ -15,6 +15,7 @@ export function PrimaryButton({
   danger?: boolean;
   disabled?: boolean;
 }) {
+  const styles = useAppStyles();
   return (
     <Pressable
       disabled={disabled}

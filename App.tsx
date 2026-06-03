@@ -19,7 +19,8 @@ import { RatingScreen } from './src/screens/RatingScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
 import { SummaryScreen } from './src/screens/SummaryScreen';
-import { styles } from './src/styles';
+import { useAppStyles } from './src/styles';
+import { useTheme } from './src/theme/ThemeContext';
 import type { NavParams, Ride, Screen } from './src/types';
 
 export default function App() {
@@ -28,10 +29,11 @@ export default function App() {
   const authReady = AUTH_BYPASS_ENABLED || !isLoading;
   const canUseApp = AUTH_BYPASS_ENABLED || isAuthenticated;
 
-  const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
   const [completedRide, setCompletedRide] = useState<Ride | null>(null);
 
   const rideSession = useRideSession();
+  const styles = useAppStyles();
+  const { isDark } = useTheme();
 
   useEffect(() => {
     const id = setTimeout(() => setSplashFinished(true), 2000);
@@ -108,10 +110,10 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.app}>
-      <StatusBar style={!splashFinished ? 'light' : 'dark'} />
+      <StatusBar style={!splashFinished ? 'light' : isDark ? 'light' : 'dark'} />
       <NavigationProvider
         initialScreen="splash"
-        onScreenChange={setCurrentScreen}
+        onScreenChange={() => {}}
       >
         {(screen, params, go) => renderScreen(screen, params, go)}
       </NavigationProvider>

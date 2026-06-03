@@ -5,7 +5,7 @@ import { useAuthActions } from '@convex-dev/auth/react';
 import { FormField } from '../components/FormField';
 import { PhoneFrame } from '../components/layout';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 import type { GoToScreen } from '../types';
 
 export function LoginScreen({ go }: { go: GoToScreen }) {
@@ -15,6 +15,7 @@ export function LoginScreen({ go }: { go: GoToScreen }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const styles = useAppStyles();
 
   const submit = async () => {
     setError('');

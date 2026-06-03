@@ -20,6 +20,7 @@ import {
   stopAccelerometer,
   stopGyroscope,
 } from '../services/sensors';
+import { startNoiseMonitoring, stopNoiseMonitoring } from '../services/audio';
 import { saveRide } from '../services/storage/rideStorage';
 import { defaultSettings, loadSettings } from '../services/storage/settingsStorage';
 import type { Incident, Ride, RidePoint } from '../types';
@@ -36,7 +37,6 @@ export type RideSession = {
   fatigueResult: FatigueResult | null;
   start: () => Promise<void>;
   end: () => Promise<Ride>;
-  // Called by GPS module (Member 2) during active ride
   updateSpeed: (kmh: number) => void;
   updateGpsStatus: (status: GpsStatus) => void;
 };
@@ -64,6 +64,8 @@ export function useRideSession(): RideSession {
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const unsubFatigueRef = useRef<(() => void) | null>(null);
   const detectorRef = useRef(createIncidentDetector(defaultSettings.incidentThresholds));
+  const micActiveRef = useRef(false);
+  const lastNoiseAlertRef = useRef(0);
 
   useEffect(() => {
     speedRef.current = currentSpeedKmh;
@@ -160,7 +162,6 @@ export function useRideSession(): RideSession {
   }, [addBackendIncident, addBackendPoint, createBackendRide, finishBackendRide]);
 
   const start = useCallback(async () => {
-    // Clean up any previous ride
     if (timerRef.current) clearInterval(timerRef.current);
     stopLocationTracking();
     stopAccelerometer();
@@ -168,6 +169,8 @@ export function useRideSession(): RideSession {
     disableFatigueDetection();
     unsubFatigueRef.current?.();
     unsubFatigueRef.current = null;
+    micActiveRef.current = false;
+    void stopNoiseMonitoring();
 
     const settings = await loadSettings();
     detectorRef.current = createIncidentDetector(settings.incidentThresholds);
@@ -179,6 +182,7 @@ export function useRideSession(): RideSession {
     startTimeRef.current = Date.now();
     elapsedRef.current = 0;
     speedRef.current = 0;
+    lastNoiseAlertRef.current = 0;
 
     setIncidents([]);
     setElapsedSeconds(0);
@@ -214,6 +218,28 @@ export function useRideSession(): RideSession {
       enableFatigueDetection();
       unsubFatigueRef.current = onFatigueUpdate(setFatigueResult);
     }
+
+    if (settings.microphoneEnabled) {
+      const noiseThreshold = settings.incidentThresholds.noiseAlertDb;
+      const scale = Math.abs(noiseThreshold) || 20;
+      micActiveRef.current = true;
+      void startNoiseMonitoring((dbLevel) => {
+        if (!micActiveRef.current) return;
+        if (dbLevel < noiseThreshold) return;
+        const now = Date.now();
+        if (now - lastNoiseAlertRef.current < 5000) return;
+        lastNoiseAlertRef.current = now;
+        addIncident({
+          id: `noise_${now}`,
+          type: 'noise_alert',
+          timestamp: now,
+          intensity: Math.min(1, Math.max(0, (dbLevel - noiseThreshold) / scale)),
+          speedKmh: speedRef.current,
+          latitude: latestPointRef.current?.latitude,
+          longitude: latestPointRef.current?.longitude,
+        });
+      }, noiseThreshold);
+    }
   }, [addIncident, startLocationTracking, stopLocationTracking]);
 
   const end = useCallback(async (): Promise<Ride> => {
@@ -227,6 +253,8 @@ export function useRideSession(): RideSession {
     disableFatigueDetection();
     unsubFatigueRef.current?.();
     unsubFatigueRef.current = null;
+    micActiveRef.current = false;
+    void stopNoiseMonitoring();
 
     setIsActive(false);
     setFatigueResult(null);
@@ -269,7 +297,6 @@ export function useRideSession(): RideSession {
     setGpsStatus(status);
   }, []);
 
-  // Cleanup on component unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -278,6 +305,8 @@ export function useRideSession(): RideSession {
       stopGyroscope();
       disableFatigueDetection();
       unsubFatigueRef.current?.();
+      micActiveRef.current = false;
+      void stopNoiseMonitoring();
     };
   }, [stopLocationTracking]);
 

@@ -5,7 +5,7 @@ import { Gauge, Moon, Rocket, Smartphone } from 'lucide-react-native';
 import { Header, PhoneFrame } from '../components/layout';
 import { getRides } from '../services/storage/rideStorage';
 import { GREEN, RED } from '../constants';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 import type { GoToScreen, Ride } from '../types';
 
 type Tab = 'aktivni' | 'zakljuceni';
@@ -24,25 +24,21 @@ function computeChallenges(rides: Ride[]): Challenge[] {
   const now = Date.now();
   const recentRides = rides.filter((r) => now - r.startTime < ONE_WEEK);
 
-  // Brez pospesenj — skupno mocnih pospeskov v zadnjem tednu
   const hardAccels = recentRides.reduce(
     (sum, r) => sum + r.incidents.filter((i) => i.type === 'hard_acceleration').length,
     0,
   );
 
-  // Gladko zaviranje — skupno mocnih zaviranj
   const hardBrakes = recentRides.reduce(
     (sum, r) => sum + r.incidents.filter((i) => i.type === 'hard_braking').length,
     0,
   );
 
-  // Nocne voznje — voznje med 22:00 in 6:00
   const nightRides = recentRides.filter((r) => {
     const hour = new Date(r.startTime).getHours();
     return hour >= 22 || hour < 6;
   }).length;
 
-  // Brez telefona — voznje brez incident noise_alert (proxy)
   const noPhoneRides = recentRides.filter(
     (r) => r.incidents.filter((i) => i.type === 'noise_alert').length === 0,
   ).length;
@@ -50,7 +46,7 @@ function computeChallenges(rides: Ride[]): Challenge[] {
   return [
     {
       title: 'Brez motnje',
-      description: '5 voženj brez opozoril',
+      description: '5 vozenj brez opozoril',
       current: Math.min(noPhoneRides, 5),
       target: 5,
       Icon: Smartphone,
@@ -83,9 +79,8 @@ function computeChallenges(rides: Ride[]): Challenge[] {
   ];
 }
 
-// Fallback ko ni pravih podatkov
 const demoChallenges: Challenge[] = [
-  { title: 'Brez motnje', description: '5 voženj brez opozoril', current: 5, target: 7, Icon: Smartphone, color: '#2d7ee8' },
+  { title: 'Brez motnje', description: '5 vozenj brez opozoril', current: 5, target: 7, Icon: Smartphone, color: '#2d7ee8' },
   { title: 'Varni pospeski', description: 'Manj kot 3 mocni pospeski', current: 2, target: 3, Icon: Rocket, color: GREEN },
   { title: 'Gladko zaviranje', description: 'Manj kot 2 mocni zaviranji', current: 1, target: 2, Icon: Gauge, color: RED },
   { title: 'Nocna voznja', description: '3 voznje ponoci', current: 1, target: 3, Icon: Moon, color: '#6d59e8' },
@@ -94,6 +89,7 @@ const demoChallenges: Challenge[] = [
 export function ChallengesScreen({ go }: { go: GoToScreen }) {
   const [activeTab, setActiveTab] = useState<Tab>('aktivni');
   const [challenges, setChallenges] = useState<Challenge[]>(demoChallenges);
+  const styles = useAppStyles();
 
   useEffect(() => {
     getRides().then((rides) => {

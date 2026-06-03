@@ -1,27 +1,34 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
-import { Bell, Camera, Clock3, Gauge, Info, Lock, MapPin, Mic, User } from 'lucide-react-native';
+import { Bell, Camera, Clock3, Gauge, Info, Lock, MapPin, Mic, SlidersHorizontal, User } from 'lucide-react-native';
 import { useMutation, useQuery } from 'convex/react';
 
 import { Header, PhoneFrame } from '../components/layout';
 import { SettingsRow } from '../components/metrics';
-import { BLUE, MUTED } from '../constants';
-import { loadSettings, saveSettings } from '../services/storage/settingsStorage';
-import { styles } from '../styles';
-import type { AppTheme, GoToScreen, SpeedUnit, UserSettings } from '../types';
+import { BLUE } from '../constants';
+import { loadSettings, saveSettings, defaultSettings } from '../services/storage/settingsStorage';
+import { seedDemoRide } from '../services/storage/rideStorage';
+import { useAppStyles } from '../styles';
+import { useTheme } from '../theme/ThemeContext';
+import type { AppTheme, GoToScreen, IncidentThresholds, SpeedUnit, UserSettings } from '../types';
 import { api } from '../../backend/convex/_generated/api';
 
 export function SettingsScreen({ go }: { go: GoToScreen }) {
   const convexSettings = useQuery(api.settings.viewer);
   const updateConvex = useMutation(api.settings.update);
   const [localSettings, setLocalSettings] = useState<UserSettings | null>(null);
+  const [thresholds, setThresholds] = useState<IncidentThresholds>(defaultSettings.incidentThresholds);
+  const [demoSeeded, setDemoSeeded] = useState(false);
+  const { setTheme, colors } = useTheme();
+  const styles = useAppStyles();
 
-  // Load local settings as fallback
   useEffect(() => {
-    loadSettings().then(setLocalSettings);
+    loadSettings().then((s) => {
+      setLocalSettings(s);
+      setThresholds(s.incidentThresholds);
+    });
   }, []);
 
-  // When Convex settings arrive, sync them locally
   useEffect(() => {
     if (convexSettings) {
       void saveSettings({
@@ -45,13 +52,23 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
   const theme = effective?.theme ?? 'light';
 
   const update = (patch: Partial<UserSettings>) => {
-    // Optimistically update local state
     setLocalSettings((prev) => (prev ? { ...prev, ...patch } : null));
     void saveSettings(patch);
-    // Sync to Convex when online
+    if (patch.theme) setTheme(patch.theme);
     if (convexSettings !== undefined) {
       void updateConvex(patch as Parameters<typeof updateConvex>[0]);
     }
+  };
+
+  const updateThreshold = <K extends keyof IncidentThresholds>(key: K, value: number) => {
+    const updated = { ...thresholds, [key]: value };
+    setThresholds(updated);
+    void saveSettings({ incidentThresholds: updated });
+  };
+
+  const handleSeedDemo = async () => {
+    await seedDemoRide();
+    setDemoSeeded(true);
   };
 
   return (
@@ -60,6 +77,7 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.settingsList}>
           <SettingsRow title="Racun" subtitle="Uredi profil" Icon={User} onPress={() => go('profile')} />
+
           <SettingsRow
             title="Obvestila"
             subtitle={notificationsEnabled ? 'Vklopljena' : 'Izklopljena'}
@@ -71,6 +89,7 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
               />
             }
           />
+
           <SettingsRow
             title="Enote"
             subtitle={speedUnit === 'kmh' ? 'Kilometri na uro' : 'Milje na uro'}
@@ -86,6 +105,7 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
               />
             }
           />
+
           <SettingsRow
             title="Tema"
             subtitle={theme === 'light' ? 'Svetla' : 'Temna'}
@@ -101,10 +121,12 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
               />
             }
           />
+
           <View style={styles.settingsSectionLabelWrap}>
-            <Lock size={16} color={MUTED} />
+            <Lock size={16} color={colors.textMuted} />
             <Text style={styles.settingsSectionLabel}>Privoljenja</Text>
           </View>
+
           <SettingsRow
             title="Kamera"
             subtitle={cameraEnabled ? 'Dovoljeno' : 'Izklopljeno'}
@@ -138,12 +160,73 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
               />
             }
           />
+
+          <View style={styles.settingsSectionLabelWrap}>
+            <SlidersHorizontal size={16} color={colors.textMuted} />
+            <Text style={styles.settingsSectionLabel}>Pragi incidentov</Text>
+          </View>
+
+          <View style={styles.thresholdSection}>
+            <ThresholdRow
+              label="Pospesk (m/s²)"
+              value={thresholds.hardAccelerationMs2}
+              onDecrement={() =>
+                updateThreshold('hardAccelerationMs2', Math.max(1.0, Math.round((thresholds.hardAccelerationMs2 - 0.5) * 10) / 10))
+              }
+              onIncrement={() =>
+                updateThreshold('hardAccelerationMs2', Math.min(8.0, Math.round((thresholds.hardAccelerationMs2 + 0.5) * 10) / 10))
+              }
+            />
+            <ThresholdRow
+              label="Zaviranje (m/s²)"
+              value={thresholds.hardBrakingMs2}
+              onDecrement={() =>
+                updateThreshold('hardBrakingMs2', Math.max(1.0, Math.round((thresholds.hardBrakingMs2 - 0.5) * 10) / 10))
+              }
+              onIncrement={() =>
+                updateThreshold('hardBrakingMs2', Math.min(8.0, Math.round((thresholds.hardBrakingMs2 + 0.5) * 10) / 10))
+              }
+            />
+            <ThresholdRow
+              label="Zavoj (°/s)"
+              value={thresholds.sharpTurnDegS}
+              onDecrement={() =>
+                updateThreshold('sharpTurnDegS', Math.max(15, thresholds.sharpTurnDegS - 5))
+              }
+              onIncrement={() =>
+                updateThreshold('sharpTurnDegS', Math.min(90, thresholds.sharpTurnDegS + 5))
+              }
+            />
+            <ThresholdRow
+              label="Hrup (dB)"
+              value={thresholds.noiseAlertDb}
+              onDecrement={() =>
+                updateThreshold('noiseAlertDb', Math.max(-60, thresholds.noiseAlertDb - 5))
+              }
+              onIncrement={() =>
+                updateThreshold('noiseAlertDb', Math.min(-5, thresholds.noiseAlertDb + 5))
+              }
+            />
+          </View>
+
+          <View style={styles.settingsSectionLabelWrap}>
+            <Info size={16} color={colors.textMuted} />
+            <Text style={styles.settingsSectionLabel}>Aplikacija</Text>
+          </View>
+
+          <SettingsRow
+            title={demoSeeded ? 'Demo voznja dodana' : 'Dodaj demo voznjo'}
+            subtitle="Za testiranje zgodovine in izzivih"
+            Icon={Info}
+            onPress={demoSeeded ? undefined : handleSeedDemo}
+          />
+          <SettingsRow title="O aplikaciji" subtitle="VozimVarno v1.0.0" Icon={Info} />
+
           {convexSettings === undefined && (
             <View style={styles.settingsSectionLabelWrap}>
               <Text style={[styles.settingsSectionLabel, { color: '#e8a800' }]}>Brez povezave — lokalne nastavitve</Text>
             </View>
           )}
-          <SettingsRow title="O aplikaciji" subtitle="VozimVarno v1.0.0" Icon={Info} />
         </View>
       </ScrollView>
     </PhoneFrame>
@@ -157,6 +240,7 @@ function SettingsSwitch({
   value: boolean;
   onValueChange: (value: boolean) => void;
 }) {
+  const styles = useAppStyles();
   return (
     <View style={styles.switchFrame}>
       <Switch
@@ -180,6 +264,7 @@ function SegmentedControl<T extends string>({
   options: Array<[T, string]>;
   onChange: (value: T) => void;
 }) {
+  const styles = useAppStyles();
   return (
     <View style={styles.segmentedControl}>
       {options.map(([option, label]) => {
@@ -194,6 +279,35 @@ function SegmentedControl<T extends string>({
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+function ThresholdRow({
+  label,
+  value,
+  onDecrement,
+  onIncrement,
+}: {
+  label: string;
+  value: number;
+  onDecrement: () => void;
+  onIncrement: () => void;
+}) {
+  const styles = useAppStyles();
+  const display = Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return (
+    <View style={styles.thresholdRow}>
+      <Text style={styles.thresholdLabel}>{label}</Text>
+      <View style={styles.thresholdControls}>
+        <Pressable style={styles.thresholdStepBtn} onPress={onDecrement}>
+          <Text style={styles.thresholdStepBtnText}>−</Text>
+        </Pressable>
+        <Text style={styles.thresholdValueText}>{display}</Text>
+        <Pressable style={styles.thresholdStepBtn} onPress={onIncrement}>
+          <Text style={styles.thresholdStepBtnText}>+</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

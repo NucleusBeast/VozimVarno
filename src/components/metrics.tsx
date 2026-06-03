@@ -3,12 +3,14 @@ import { Pressable, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { ChevronRight } from 'lucide-react-native';
 
-import { GREEN, MUTED, TEXT, YELLOW } from '../constants';
-import { styles } from '../styles';
+import { GREEN, YELLOW } from '../constants';
+import { useAppStyles } from '../styles';
+import { useTheme } from '../theme/ThemeContext';
 import type { IconType } from '../types';
 export { MapCard } from './MapCard';
 
 export function MetricCard({ label, value }: { label: string; value: string }) {
+  const styles = useAppStyles();
   return (
     <View style={styles.metricCard}>
       <Text style={styles.metricLabel}>{label}</Text>
@@ -18,6 +20,7 @@ export function MetricCard({ label, value }: { label: string; value: string }) {
 }
 
 export function InfoRows({ rows, compact = false }: { rows: Array<[string, string]>; compact?: boolean }) {
+  const styles = useAppStyles();
   return (
     <View style={[styles.infoRows, compact && styles.infoRowsCompact]}>
       {rows.map(([label, value]) => (
@@ -31,6 +34,7 @@ export function InfoRows({ rows, compact = false }: { rows: Array<[string, strin
 }
 
 export function Stat({ label, value }: { label: string; value: string }) {
+  const styles = useAppStyles();
   return (
     <View style={styles.stat}>
       <Text style={styles.statLabel}>{label}</Text>
@@ -52,14 +56,18 @@ export function SettingsRow({
   trailing?: React.ReactNode;
   onPress?: () => void;
 }) {
+  const styles = useAppStyles();
+  const { colors } = useTheme();
   return (
     <Pressable style={styles.settingsRow} onPress={onPress}>
-      <Icon size={20} color={TEXT} />
+      <Icon size={20} color={colors.text} />
       <View style={styles.settingsRowText}>
         <Text style={styles.settingsTitle}>{title}</Text>
         {subtitle ? <Text style={styles.settingsSubtitle}>{subtitle}</Text> : null}
       </View>
-      <View style={styles.settingsTrailing}>{trailing ?? <ChevronRight size={18} color={MUTED} />}</View>
+      <View style={styles.settingsTrailing}>
+        {trailing ?? <ChevronRight size={18} color={colors.textMuted} />}
+      </View>
     </Pressable>
   );
 }
@@ -75,6 +83,8 @@ export function ScoreRing({
   stroke: number;
   small?: boolean;
 }) {
+  const styles = useAppStyles();
+  const { colors } = useTheme();
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - value / 100);
@@ -83,7 +93,7 @@ export function ScoreRing({
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size}>
-        <Circle cx={size / 2} cy={size / 2} r={radius} stroke="#e7ecf2" strokeWidth={stroke} fill="none" />
+        <Circle cx={size / 2} cy={size / 2} r={radius} stroke={colors.svgTrack} strokeWidth={stroke} fill="none" />
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -106,6 +116,8 @@ export function ScoreRing({
 }
 
 export function SpeedGauge({ value }: { value: number }) {
+  const styles = useAppStyles();
+  const { colors } = useTheme();
   const progress = Math.min(Math.max(value / 100, 0), 1);
   const radius = 84;
   const stroke = 13;
@@ -115,7 +127,7 @@ export function SpeedGauge({ value }: { value: number }) {
   return (
     <View style={styles.speedWrap}>
       <Svg width={240} height={154} viewBox="0 0 240 154">
-        <Path d={arcPath} stroke="#e8eaee" strokeWidth={stroke} fill="none" strokeLinecap="round" />
+        <Path d={arcPath} stroke={colors.svgTrack} strokeWidth={stroke} fill="none" strokeLinecap="round" />
         <Path
           d={arcPath}
           stroke="#1268b9"

@@ -7,13 +7,16 @@ import { ScoreRing } from '../components/metrics';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { YELLOW } from '../constants';
 import { saveRide } from '../services/storage/rideStorage';
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
+import { useTheme } from '../theme/ThemeContext';
 import type { GoToScreen, Ride } from '../types';
 
 export function RatingScreen({ go, ride }: { go: GoToScreen; ride: Ride | null }) {
   const [selectedRating, setSelectedRating] = useState(4);
   const [comment, setComment] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const styles = useAppStyles();
+  const { colors } = useTheme();
 
   const handleSave = async () => {
     if (ride) {
@@ -46,7 +49,7 @@ export function RatingScreen({ go, ride }: { go: GoToScreen; ride: Ride | null }
             <Pressable key={star} onPress={() => setSelectedRating(star)}>
               <Star
                 size={42}
-                color={star <= selectedRating ? YELLOW : '#9aa6b7'}
+                color={star <= selectedRating ? YELLOW : colors.textMuted}
                 fill={star <= selectedRating ? YELLOW : 'none'}
                 strokeWidth={1.8}
               />
@@ -56,7 +59,7 @@ export function RatingScreen({ go, ride }: { go: GoToScreen; ride: Ride | null }
         <TextInput
           multiline
           placeholder="Dodaj komentar (neobvezno)"
-          placeholderTextColor="#9aa6b7"
+          placeholderTextColor={colors.textMuted}
           style={styles.commentBox}
           value={comment}
           onChangeText={setComment}

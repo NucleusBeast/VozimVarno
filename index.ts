@@ -6,6 +6,7 @@ import { ConvexAuthProvider } from '@convex-dev/auth/react';
 import { ConvexReactClient } from 'convex/react';
 
 import App from './App';
+import { ThemeProvider } from './src/theme/ThemeContext';
 
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 
@@ -68,11 +69,13 @@ function Root() {
 
   return React.createElement(
     ConvexAuthProvider,
-    { client: convex, storage: authStorage, children: React.createElement(App) },
+    { client: convex, storage: authStorage },
+    React.createElement(
+      ThemeProvider,
+      null,
+      React.createElement(App),
+    ),
   );
 }
 
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
 registerRootComponent(Root);

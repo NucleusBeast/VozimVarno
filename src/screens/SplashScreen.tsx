@@ -1,9 +1,10 @@
 import { Text, View } from 'react-native';
 import { Car, ShieldCheck } from 'lucide-react-native';
 
-import { styles } from '../styles';
+import { useAppStyles } from '../styles';
 
 export function SplashScreen() {
+  const styles = useAppStyles();
   return (
     <View style={styles.splashFrame}>
       <View style={styles.splashBody}>
