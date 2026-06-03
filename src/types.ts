@@ -64,6 +64,8 @@ export type Ride = {
   points: RidePoint[];
   maxSpeedKmh: number;
   avgSpeedKmh: number;
+  userRating?: number;   // 1–5 stars, set in RatingScreen
+  userComment?: string;
 };
 
 export type RideSummary = {

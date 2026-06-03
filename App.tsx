@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native';
 
 import { NavigationProvider } from './src/navigation';
 import { AUTH_BYPASS_ENABLED } from './src/constants';
+import { useRideSession } from './src/hooks/useRideSession';
 import { ActiveRideScreen } from './src/screens/ActiveRideScreen';
 import { ChallengesScreen } from './src/screens/ChallengesScreen';
 import { DetailsScreen } from './src/screens/DetailsScreen';
@@ -19,17 +20,18 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
 import { SummaryScreen } from './src/screens/SummaryScreen';
 import { styles } from './src/styles';
-import type { NavParams, Screen } from './src/types';
+import type { NavParams, Ride, Screen } from './src/types';
 
 export default function App() {
   const [splashFinished, setSplashFinished] = useState(false);
-  const [rideSeconds, setRideSeconds] = useState(0);
   const { isLoading, isAuthenticated } = useConvexAuth();
   const authReady = AUTH_BYPASS_ENABLED || !isLoading;
   const canUseApp = AUTH_BYPASS_ENABLED || isAuthenticated;
 
-  // Track current screen for StatusBar styling
   const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
+  const [completedRide, setCompletedRide] = useState<Ride | null>(null);
+
+  const rideSession = useRideSession();
 
   useEffect(() => {
     const id = setTimeout(() => setSplashFinished(true), 2000);
@@ -40,7 +42,6 @@ export default function App() {
     if (!splashFinished) return <SplashScreen />;
     if (!authReady) return <LoadingScreen />;
 
-    // Auth guard
     if (!canUseApp && screen !== 'login') {
       return <LoginScreen go={go} />;
     }
@@ -54,23 +55,39 @@ export default function App() {
       case 'home':
         return <HomeScreen go={go} />;
       case 'prepare':
-        return <PrepareScreen go={go} startRide={() => { setRideSeconds(0); go('active'); }} />;
+        return (
+          <PrepareScreen
+            go={go}
+            startRide={async () => {
+              await rideSession.start();
+              go('active');
+            }}
+          />
+        );
       case 'active':
         return (
           <ActiveRideScreen
             go={go}
-            elapsedSeconds={rideSeconds}
-            setElapsedSeconds={setRideSeconds}
+            elapsedSeconds={rideSession.elapsedSeconds}
+            incidents={rideSession.incidents}
+            currentSpeedKmh={rideSession.currentSpeedKmh}
+            gpsStatus={rideSession.gpsStatus}
+            fatigueResult={rideSession.fatigueResult}
+            onEndRide={async () => {
+              const ride = await rideSession.end();
+              setCompletedRide(ride);
+              go('summary');
+            }}
           />
         );
       case 'summary':
-        return <SummaryScreen go={go} elapsedSeconds={rideSeconds} />;
+        return <SummaryScreen go={go} ride={completedRide} />;
       case 'history':
         return <HistoryScreen go={go} />;
       case 'details':
         return <DetailsScreen go={go} rideId={params.rideId} />;
       case 'rating':
-        return <RatingScreen go={go} />;
+        return <RatingScreen go={go} ride={completedRide} />;
       case 'challenges':
         return <ChallengesScreen go={go} />;
       case 'profile':
