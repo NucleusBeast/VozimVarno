@@ -76,6 +76,8 @@ function normalizeRide(ride: Partial<Ride>): Ride {
     points,
     maxSpeedKmh: ride.maxSpeedKmh ?? 0,
     avgSpeedKmh: ride.avgSpeedKmh ?? 0,
+    userRating: ride.userRating,
+    userComment: ride.userComment,
     weather: ride.weather,
   };
 }

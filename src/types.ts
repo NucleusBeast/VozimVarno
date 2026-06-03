@@ -7,9 +7,11 @@ export type Screen =
   | 'prepare'
   | 'active'
   | 'summary'
+  | 'results'
   | 'history'
   | 'details'
   | 'rating'
+  | 'ratingHistory'
   | 'challenges'
   | 'profile'
   | 'settings';

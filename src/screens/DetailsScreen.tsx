@@ -3,10 +3,12 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { Header, PhoneFrame } from '../components/layout';
 import { InfoRows, MapCard, MetricCard } from '../components/metrics';
+import { YELLOW } from '../constants';
 import { getRideById } from '../services/storage/rideStorage';
 import { formatDuration } from '../utils/formatDuration';
 import { useAppStyles } from '../styles';
 import type { GoToScreen, Ride } from '../types';
+import { Star } from 'lucide-react-native';
 
 function formatRideDate(timestamp: number): string {
   return new Intl.DateTimeFormat('sl-SI', {
@@ -66,6 +68,25 @@ export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string 
                 ['Veter', ride.weather.windSpeedKmh !== undefined ? `${Math.round(ride.weather.windSpeedKmh)} km/h` : 'Ni podatka'],
               ]}
             />
+          </>
+        ) : null}
+        {ride?.userRating ? (
+          <>
+            <Text style={styles.sectionTitle}>Ocena voznje</Text>
+            <View style={styles.detailsRatingCard}>
+              <View style={styles.detailsStarRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={24}
+                    color={star <= ride.userRating! ? YELLOW : '#6b7280'}
+                    fill={star <= ride.userRating! ? YELLOW : 'none'}
+                    strokeWidth={1.8}
+                  />
+                ))}
+              </View>
+              {ride.userComment ? <Text style={styles.detailsCommentText}>{ride.userComment}</Text> : null}
+            </View>
           </>
         ) : null}
       </ScrollView>
