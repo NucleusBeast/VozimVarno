@@ -11,6 +11,10 @@ const defaultSettings = {
   cameraEnabled: true,
   gpsEnabled: true,
   microphoneEnabled: true,
+  hardAccelerationMs2: 3.2,
+  hardBrakingMs2: 4.0,
+  sharpTurnDegS: 120,
+  noiseAlertDb: 82,
 };
 
 async function getSettingsDoc(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
@@ -49,6 +53,10 @@ export const update = mutation({
     cameraEnabled: v.optional(v.boolean()),
     gpsEnabled: v.optional(v.boolean()),
     microphoneEnabled: v.optional(v.boolean()),
+    hardAccelerationMs2: v.optional(v.number()),
+    hardBrakingMs2: v.optional(v.number()),
+    sharpTurnDegS: v.optional(v.number()),
+    noiseAlertDb: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

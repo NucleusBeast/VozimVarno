@@ -8,7 +8,7 @@ async function readAll(): Promise<Ride[]> {
   try {
     const raw = await AsyncStorage.getItem(RIDES_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as Ride[];
+    return (JSON.parse(raw) as Partial<Ride>[]).map(normalizeRide);
   } catch {
     return [];
   }
@@ -57,6 +57,27 @@ export async function deleteRide(id: string): Promise<void> {
 
 export async function clearAllRides(): Promise<void> {
   await AsyncStorage.removeItem(RIDES_KEY);
+}
+
+function normalizeRide(ride: Partial<Ride>): Ride {
+  const startTime = ride.startTime ?? Date.now();
+  const endTime = ride.endTime ?? startTime;
+  const points = Array.isArray(ride.points) ? ride.points : [];
+  const incidents = Array.isArray(ride.incidents) ? ride.incidents : [];
+
+  return {
+    id: ride.id ?? `ride_${startTime}`,
+    startTime,
+    endTime,
+    durationSeconds: ride.durationSeconds ?? Math.max(0, Math.round((endTime - startTime) / 1000)),
+    distanceKm: ride.distanceKm ?? 0,
+    score: ride.score ?? 82,
+    incidents,
+    points,
+    maxSpeedKmh: ride.maxSpeedKmh ?? 0,
+    avgSpeedKmh: ride.avgSpeedKmh ?? 0,
+    weather: ride.weather,
+  };
 }
 
 // --- Stats helpers ---

@@ -14,7 +14,7 @@ export type Screen =
   | 'profile'
   | 'settings';
 
-export type GoToScreen = (screen: Screen) => void;
+export type GoToScreen = (screen: Screen, params?: NavParams) => void;
 
 export type IconType = React.ComponentType<{
   size?: number;
@@ -53,6 +53,14 @@ export type RidePoint = {
   altitude?: number;
 };
 
+export type WeatherContext = {
+  temperatureC?: number;
+  windSpeedKmh?: number;
+  condition?: string;
+  fetchedAt: number;
+  source: 'open-meteo' | 'cache' | 'fallback';
+};
+
 export type Ride = {
   id: string;
   startTime: number;
@@ -64,6 +72,7 @@ export type Ride = {
   points: RidePoint[];
   maxSpeedKmh: number;
   avgSpeedKmh: number;
+  weather?: WeatherContext;
 };
 
 export type RideSummary = {

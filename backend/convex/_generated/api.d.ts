@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as rides from "../rides.js";
 import type * as settings from "../settings.js";
 import type * as users from "../users.js";
 
@@ -22,6 +23,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
+  rides: typeof rides;
   settings: typeof settings;
   users: typeof users;
 }>;
