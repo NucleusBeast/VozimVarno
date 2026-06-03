@@ -58,42 +58,42 @@ Odgovornost iz plana: GPS, pot, zunanji podatki in backend integracija.
 - `PrepareScreen` preverja in zahteva GPS dovoljenje.
 - Obstaja location modul: `src/services/location/`.
 - `useRideLocation` zna spremljati GPS tocke, trenutno hitrost, accuracy in status.
+- `useRideSession` zdaj neposredno uporablja GPS watcher med aktivno voznjo.
+- `useRideSession` sproti posodablja hitrost in GPS status iz realnih GPS vzorcev.
+- Incident detector dobi trenutno GPS lokacijo, zato incidenti lahko vsebujejo latitude/longitude.
 - Obstajajo helperji za:
   - pretvorbo lokacije v `RidePoint`,
   - izracun razdalje,
   - povprecno hitrost,
   - najvisjo hitrost.
 - Tip `RidePoint` vsebuje latitude, longitude, speedKmh, timestamp in altitude.
+- Ob zakljucku voznje se shranijo dejanske GPS tocke, razdalja, najvisja hitrost in povprecna hitrost.
 - Convex schema ima domenske tabele:
   - `rides`,
   - `ridePoints`,
   - `rideIncidents`,
   - `userSettings`.
 - Obstaja Convex modul `backend/convex/rides.ts` z mutacijami/queryji za ustvarjanje, tocke, incidente, zakljucek, zgodovino in podrobnosti.
+- Ob zakljucku voznje se voznja lokalno shrani in se nato best-effort sinhronizira v Convex.
 - `HistoryScreen` bere shranjene voznje iz lokalne hrambe in odpira podrobnosti z `rideId`.
 - `DetailsScreen` zna prikazati dejanske podrobnosti voznje iz lokalne hrambe.
 - `MapCard` zna narisati pot iz `RidePoint[]` kot SVG polyline.
+- `MapCard` na native platformah uporablja `react-native-maps` za dejanski map prikaz poti, na webu ostane SVG fallback.
 - Obstaja weather REST integracija: `src/services/api/weather.ts`.
 - Weather API ima cache/fallback prek AsyncStorage.
+- Weather API je priklopljen v zakljucek voznje in se shrani v `Ride.weather`, ce obstaja zadnja GPS tocka.
 
 ### Delno narejeno
 
-- GPS/location modul obstaja, vendar ni integriran v `useRideSession`, ki je trenutno glavni tok aktivne voznje.
-- `ActiveRideScreen` trenutno dobiva hitrost iz `rideSession.currentSpeedKmh`, ta pa se ne posodablja iz `useRideLocation`.
-- Shranjene voznje imajo trenutno lahko prazne `points`, ker `useRideSession.end()` se vedno nastavi `points: []` in `distanceKm: 0`.
-- Convex ride API obstaja, ampak frontend trenutno uporablja predvsem lokalni `rideStorage`, ne Convex ride mutacij/queryjev.
-- `MapCard` je demo/SVG pot, ne prava mapa.
-- Weather API obstaja, ampak ni stabilno priklopljen na glavni zakljucek voznje po trenutnem `useRideSession` toku.
+- Convex sync je best-effort po zakljucku voznje, ne pa se popoln dvosmerni sync z lokalno vrsto za kasnejse poskuse.
+- Zgodovina in podrobnosti se se vedno primarno bereta iz lokalne hrambe, ne direktno iz Convex queryjev.
+- Web prikaz mape ostaja SVG fallback, ker `react-native-maps` je native komponenta.
 
 ### Se manjka
 
-- Povezati `useRideLocation` v `useRideSession`.
-- Ob vsaki GPS spremembi posodobiti `currentSpeedKmh`, GPS status in trenutno lokacijo za incidente.
-- Ob koncu voznje shraniti dejanske `points`, razdaljo, max speed in avg speed.
-- Povezati weather API v glavni `end()` tok.
-- Odlociti se, ali je primarna podatkovna plast lokalna shramba ali Convex, nato uskladiti frontend.
-- Uporabiti Convex `rides` mutacije/queryje ali jasno oznaciti Convex kot pripravljeno backend plast.
-- Zamenjati SVG `MapCard` s pravo map komponento ali vsaj bolj jasno demo integracijo.
+- Dodati zanesljivo retry vrsto za neuspele Convex synce.
+- Po potrebi prikazati Convex zgodovino na drugi napravi, ne samo lokalno shranjenih vozenj.
+- Testirati GPS in map prikaz na fizicni napravi.
 
 ## Clan 3 - Marko Kramer
 
@@ -154,19 +154,18 @@ Odgovornost iz plana: lokalna baza, mikrofon, UI/nastavitve in finalna integraci
 ## Skupne stvari, ki se manjkajo
 
 - Fizicno testiranje na telefonu ali development buildu.
-- Integracija GPS v glavni ride session.
+- Testiranje GPS integracije v glavnem ride sessionu na fizicni napravi.
 - Integracija mikrofon/hrup v glavni ride session.
-- Integracija weather podatkov v shranjeno voznjo po trenutnem toku.
-- Odlocitev in konsistentna raba podatkovne plasti: lokalno, Convex ali hibrid s sync.
-- Prava mapa namesto SVG prikaza.
+- Poln retry sync za lokalno shranjene voznje v Convex.
+- Produkcijska mapa je na native platformah dodana, web ima fallback.
 - Produkcijska fatigue/ML zaznava ali dodelan demo fallback.
 - Pravi globalni dark mode.
 - Finalni demo scenarij.
 
 ## Priporocen naslednji vrstni red dela
 
-1. Filip poveze `useRideLocation` v `useRideSession`, da voznje dobijo realne tocke, razdaljo in hitrost.
-2. Lovro poskrbi, da incidenti dobijo trenutno GPS lokacijo in da se pragovi preizkusijo na napravi.
-3. Marko poveze mikrofon v `useRideSession` in doda `noise_alert` incidente.
-4. Ekipa se odloci, ali zakljucena voznja gre samo v AsyncStorage ali tudi v Convex.
+1. Lovro preizkusi pragove senzorjev na napravi in potrdi, da GPS lokacija incidentov deluje v realnem toku.
+2. Marko poveze mikrofon v `useRideSession` in doda `noise_alert` incidente.
+3. Filip testira novo GPS/map/weather integracijo na telefonu z dejansko voznjo ali sprehodom.
+4. Ekipa se odloci, ali se doda retry vrsta za Convex sync ali ostane lokalna hramba primarni demo vir.
 5. Ekipa pripravi eno zanesljivo demo voznjo za zagovor.
