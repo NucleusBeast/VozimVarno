@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useQuery } from 'convex/react';
 
 import { Header, PhoneFrame } from '../components/layout';
 import { InfoRows, MapCard, MetricCard } from '../components/metrics';
-import { YELLOW } from '../constants';
+import { BLUE, YELLOW } from '../constants';
 import { getRideById } from '../services/storage/rideStorage';
 import { formatDuration } from '../utils/formatDuration';
 import { useAppStyles } from '../styles';
 import type { GoToScreen, Ride } from '../types';
 import { Star } from 'lucide-react-native';
+import { api } from '../../backend/convex/_generated/api';
 
 function formatRideDate(timestamp: number): string {
   return new Intl.DateTimeFormat('sl-SI', {
@@ -21,40 +23,73 @@ function formatRideDate(timestamp: number): string {
 }
 
 export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string }) {
-  const [ride, setRide] = useState<Ride | null>(null);
+  const remoteRide = useQuery(api.rides.detailsByIdentifier, rideId ? { rideIdentifier: rideId } : 'skip');
+  const [localRide, setLocalRide] = useState<Ride | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const styles = useAppStyles();
 
-  useEffect(() => {
-    if (!rideId) return;
-    getRideById(rideId).then(setRide);
+  const loadLocalRide = useCallback(async () => {
+    if (!rideId) {
+      setLocalRide(null);
+      return null;
+    }
+
+    const storedRide = await getRideById(rideId);
+    setLocalRide(storedRide);
+    return storedRide;
   }, [rideId]);
 
+  useEffect(() => {
+    void loadLocalRide();
+  }, [loadLocalRide]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    const minVisibleTime = wait(1000);
+
+    try {
+      await loadLocalRide();
+    } finally {
+      await minVisibleTime;
+      setRefreshing(false);
+    }
+  }, [loadLocalRide]);
+
+  const ride = (remoteRide ?? localRide) as Ride | null;
   const points = ride?.points ?? [];
   const incidents = ride?.incidents ?? [];
 
   return (
     <PhoneFrame>
       <Header title="Podrobnosti voznje" back="history" go={go} />
-      <ScrollView contentContainerStyle={styles.detailsBody} showsVerticalScrollIndicator={false}>
-        <Text style={styles.dateCenter}>{ride ? formatRideDate(ride.startTime) : 'Demo voznja'}</Text>
+      <ScrollView
+        contentContainerStyle={styles.detailsBody}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[BLUE]}
+            tintColor={BLUE}
+            progressBackgroundColor="#ffffff"
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.dateCenter}>{ride ? formatRideDate(ride.startTime) : 'Vožnja ni najdena'}</Text>
         <MapCard points={points} />
         <View style={styles.metricGrid}>
-          <MetricCard label="Razdalja" value={ride ? `${ride.distanceKm.toFixed(2)} km` : '18,7 km'} />
-          <MetricCard label="Cas voznje" value={ride ? formatDuration(ride.durationSeconds) : '00:24:18'} />
-          <MetricCard label="Povp. hitrost" value={ride ? `${ride.avgSpeedKmh} km/h` : '46 km/h'} />
+          <MetricCard label="Razdalja" value={ride ? `${ride.distanceKm.toFixed(2)} km` : '0,00 km'} />
+          <MetricCard label="Cas voznje" value={ride ? formatDuration(ride.durationSeconds) : '00:00'} />
+          <MetricCard label="Povp. hitrost" value={ride ? `${ride.avgSpeedKmh} km/h` : '0 km/h'} />
         </View>
         <Text style={styles.sectionTitle}>Dogodki</Text>
         <InfoRows
           compact
-          rows={ride ? [
+          rows={[
             ['Incidenti skupaj', `${incidents.length}`],
             ['Hrup opozorila', `${incidents.filter((i) => i.type === 'noise_alert').length}`],
             ['GPS tocke', `${points.length}`],
-            ['Najvisja hitrost', `${ride.maxSpeedKmh} km/h`],
-          ] : [
-            ['Pospeski', '5'],
-            ['Zaviranja', '2'],
-            ['Odstopanja hitrosti', '1'],
+            ['Najvisja hitrost', ride ? `${ride.maxSpeedKmh} km/h` : '0 km/h'],
           ]}
         />
         {ride?.weather ? (
@@ -92,4 +127,8 @@ export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string 
       </ScrollView>
     </PhoneFrame>
   );
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

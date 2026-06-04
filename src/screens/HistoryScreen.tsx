@@ -7,7 +7,6 @@ import { BottomNav, Header, PhoneFrame } from '../components/layout';
 import { ScoreRing } from '../components/metrics';
 import { getRides } from '../services/storage/rideStorage';
 import { toRideSyncPayload } from '../services/storage/rideSync';
-import { rideHistory } from '../data';
 import { useAppStyles } from '../styles';
 import type { GoToScreen, Ride, RideSummary } from '../types';
 import { formatDuration } from '../utils/formatDuration';
@@ -48,15 +47,9 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
 
   const getRidesNeedingSync = useCallback((rides: Ride[]) => {
     if (!isAuthenticated || convexRides === undefined) return [];
-    const convexByClientId = new Map(convexRides.map((ride) => [ride.clientRideId, ride]));
-    return rides.filter((ride) => {
-      const convexRide = convexByClientId.get(ride.id);
-      return (
-        !convexRide ||
-        convexRide.userRating !== ride.userRating ||
-        (convexRide.userComment ?? '') !== (ride.userComment ?? '')
-      );
-    });
+    const syncedClientRideIds = new Set(convexRides.map((ride) => ride.clientRideId).filter(Boolean));
+    const syncedStartTimes = new Set(convexRides.map((ride) => ride.startTime));
+    return rides.filter((ride) => !syncedClientRideIds.has(ride.id) && !syncedStartTimes.has(ride.startTime));
   }, [convexRides, isAuthenticated]);
 
   const onRefresh = useCallback(async () => {
@@ -100,11 +93,9 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
     }));
   }, [storedRides]);
 
-  const remoteOnlyRides = useMemo<RideSummary[]>(() => {
+  const convexRideSummaries = useMemo<RideSummary[]>(() => {
     if (convexRides === undefined) return [];
-    const localIds = new Set(storedRides.map((ride) => ride.id));
     return convexRides
-      .filter((ride) => !ride.clientRideId || !localIds.has(ride.clientRideId))
       .map((ride) => ({
         id: ride.clientRideId ?? ride.id,
         clientRideId: ride.clientRideId,
@@ -116,11 +107,17 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
         userRating: ride.userRating,
         userComment: ride.userComment,
       }));
-  }, [convexRides, storedRides]);
+  }, [convexRides]);
 
   const allRides = useMemo(() => {
-    return [...storedRideSummaries, ...remoteOnlyRides].sort((a, b) => b.startTime - a.startTime);
-  }, [remoteOnlyRides, storedRideSummaries]);
+    const convexClientIds = new Set(convexRideSummaries.map((ride) => ride.clientRideId).filter(Boolean));
+    const convexStartTimes = new Set(convexRideSummaries.map((ride) => ride.startTime));
+    const localOnlyRides = storedRideSummaries.filter((ride) => {
+      return !convexClientIds.has(ride.clientRideId) && !convexStartTimes.has(ride.startTime);
+    });
+
+    return [...convexRideSummaries, ...localOnlyRides].sort((a, b) => b.startTime - a.startTime);
+  }, [convexRideSummaries, storedRideSummaries]);
 
   const hasRealData = allRides.length > 0;
   const displayRides = filterRides(allRides);
@@ -155,51 +152,33 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
         ))}
       </View>
 
-      {hasRealData ? (
-        <ScrollView
-          contentContainerStyle={styles.historyList}
-          refreshControl={refreshControl}
-          showsVerticalScrollIndicator={false}
-        >
-          {displayRides.length === 0 ? (
-            <Text style={styles.emptyState}>Ni vozenj v izbranem obdobju.</Text>
-          ) : (
-            displayRides.map((ride) => (
-              <Pressable
-                key={ride.id}
-                style={styles.historyItem}
-                onPress={() => go('details', { rideId: ride.id })}
-              >
-                <View>
-                  <Text style={styles.historyDate}>{formatRideDate(ride.startTime)}</Text>
-                  <Text style={styles.historyMeta}>
-                    {ride.distanceKm.toFixed(1)} km  •  {formatDuration(ride.durationSeconds)}
-                  </Text>
-                </View>
-                <ScoreRing value={ride.score} size={48} stroke={4} small />
-              </Pressable>
-            ))
-          )}
-        </ScrollView>
-      ) : (
-        <ScrollView
-          contentContainerStyle={styles.historyList}
-          refreshControl={refreshControl}
-          showsVerticalScrollIndicator={false}
-        >
-          {rideHistory.map((ride) => (
-            <Pressable key={ride.date} style={styles.historyItem} onPress={() => go('details')}>
+      <ScrollView
+        contentContainerStyle={styles.historyList}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+      >
+        {!hasRealData ? (
+          <Text style={styles.emptyState}>Nimate še nobene vožnje!</Text>
+        ) : displayRides.length === 0 ? (
+          <Text style={styles.emptyState}>Ni vozenj v izbranem obdobju.</Text>
+        ) : (
+          displayRides.map((ride) => (
+            <Pressable
+              key={ride.id}
+              style={styles.historyItem}
+              onPress={() => go('details', { rideId: ride.id })}
+            >
               <View>
-                <Text style={styles.historyDate}>{ride.date}</Text>
+                <Text style={styles.historyDate}>{formatRideDate(ride.startTime)}</Text>
                 <Text style={styles.historyMeta}>
-                  {ride.distance}  •  {ride.time}
+                  {ride.distanceKm.toFixed(1)} km  •  {formatDuration(ride.durationSeconds)}
                 </Text>
               </View>
               <ScoreRing value={ride.score} size={48} stroke={4} small />
             </Pressable>
-          ))}
-        </ScrollView>
-      )}
+          ))
+        )}
+      </ScrollView>
 
       <BottomNav active="history" go={go} />
     </PhoneFrame>

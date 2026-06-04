@@ -205,6 +205,70 @@ export const finishRide = mutation({
   },
 });
 
+export const deleteAllMyRides = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error('Client is not authenticated.');
+
+    const rides = await ctx.db
+      .query('rides')
+      .withIndex('userId', (q) => q.eq('userId', userId))
+      .collect();
+
+    let deletedPoints = 0;
+    let deletedIncidents = 0;
+
+    for (const ride of rides) {
+      const [points, incidents] = await Promise.all([
+        ctx.db.query('ridePoints').withIndex('rideId', (q) => q.eq('rideId', ride._id)).collect(),
+        ctx.db.query('rideIncidents').withIndex('rideId', (q) => q.eq('rideId', ride._id)).collect(),
+      ]);
+
+      deletedPoints += points.length;
+      deletedIncidents += incidents.length;
+
+      await Promise.all([
+        ...points.map((point) => ctx.db.delete(point._id)),
+        ...incidents.map((incident) => ctx.db.delete(incident._id)),
+      ]);
+
+      await ctx.db.delete(ride._id);
+    }
+
+    return {
+      deletedRides: rides.length,
+      deletedPoints,
+      deletedIncidents,
+    };
+  },
+});
+
+export const deleteAllRidesForTesting = mutation({
+  args: {
+    confirm: v.literal('DELETE_ALL_RIDES'),
+  },
+  handler: async (ctx) => {
+    const [points, incidents, rides] = await Promise.all([
+      ctx.db.query('ridePoints').collect(),
+      ctx.db.query('rideIncidents').collect(),
+      ctx.db.query('rides').collect(),
+    ]);
+
+    await Promise.all([
+      ...points.map((point) => ctx.db.delete(point._id)),
+      ...incidents.map((incident) => ctx.db.delete(incident._id)),
+      ...rides.map((ride) => ctx.db.delete(ride._id)),
+    ]);
+
+    return {
+      deletedRides: rides.length,
+      deletedPoints: points.length,
+      deletedIncidents: incidents.length,
+    };
+  },
+});
+
 export const history = query({
   args: {},
   handler: async (ctx) => {
@@ -258,6 +322,67 @@ export const details = query({
       ...ride,
       points,
       incidents,
+    };
+  },
+});
+
+export const detailsByIdentifier = query({
+  args: {
+    rideIdentifier: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
+
+    const normalizedRideId = ctx.db.normalizeId('rides', args.rideIdentifier);
+    const rideById = normalizedRideId !== null ? await ctx.db.get(normalizedRideId) : null;
+    const rideByClientId = rideById ?? await ctx.db
+      .query('rides')
+      .withIndex('userId_clientRideId', (q) => q.eq('userId', userId).eq('clientRideId', args.rideIdentifier))
+      .unique();
+
+    const ride = rideByClientId !== null && rideByClientId.userId === userId ? rideByClientId : null;
+    if (ride === null) return null;
+
+    const [points, incidents] = await Promise.all([
+      ctx.db.query('ridePoints').withIndex('rideId', (q) => q.eq('rideId', ride._id)).collect(),
+      ctx.db.query('rideIncidents').withIndex('rideId', (q) => q.eq('rideId', ride._id)).collect(),
+    ]);
+
+    return {
+      id: ride.clientRideId ?? ride._id,
+      startTime: ride.startTime,
+      endTime: ride.endTime ?? ride.startTime + ride.durationSeconds * 1000,
+      durationSeconds: ride.durationSeconds,
+      distanceKm: ride.distanceKm,
+      score: ride.score,
+      maxSpeedKmh: ride.maxSpeedKmh,
+      avgSpeedKmh: ride.avgSpeedKmh,
+      userRating: ride.userRating,
+      userComment: ride.userComment,
+      weather: ride.weatherCondition || ride.temperatureC !== undefined || ride.windSpeedKmh !== undefined ? {
+        condition: ride.weatherCondition,
+        temperatureC: ride.temperatureC,
+        windSpeedKmh: ride.windSpeedKmh,
+        fetchedAt: ride.updatedAt,
+        source: 'cache' as const,
+      } : undefined,
+      points: points.map((point) => ({
+        latitude: point.latitude,
+        longitude: point.longitude,
+        speedKmh: point.speedKmh,
+        timestamp: point.timestamp,
+        altitude: point.altitude,
+      })),
+      incidents: incidents.map((incident) => ({
+        id: incident._id,
+        type: incident.type,
+        timestamp: incident.timestamp,
+        intensity: incident.intensity,
+        speedKmh: incident.speedKmh,
+        latitude: incident.latitude,
+        longitude: incident.longitude,
+      })),
     };
   },
 });

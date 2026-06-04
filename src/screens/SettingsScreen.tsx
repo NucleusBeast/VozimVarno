@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
-import { Bell, Camera, Clock3, Gauge, Info, Lock, MapPin, Mic, SlidersHorizontal, User } from 'lucide-react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Bell, Camera, Clock3, Gauge, Info, Lock, MapPin, Mic, SlidersHorizontal, Trash2, User } from 'lucide-react-native';
 import { useMutation, useQuery } from 'convex/react';
 
 import { Header, PhoneFrame } from '../components/layout';
 import { SettingsRow } from '../components/metrics';
-import { BLUE } from '../constants';
+import { BLUE, RED } from '../constants';
 import { loadSettings, saveSettings, defaultSettings } from '../services/storage/settingsStorage';
-import { seedDemoRide } from '../services/storage/rideStorage';
+import { clearAllRides, seedDemoRide } from '../services/storage/rideStorage';
 import { useAppStyles } from '../styles';
 import { useTheme } from '../theme/ThemeContext';
 import type { AppTheme, GoToScreen, IncidentThresholds, SpeedUnit, UserSettings } from '../types';
@@ -16,9 +16,11 @@ import { api } from '../../backend/convex/_generated/api';
 export function SettingsScreen({ go }: { go: GoToScreen }) {
   const convexSettings = useQuery(api.settings.viewer);
   const updateConvex = useMutation(api.settings.update);
+  const deleteOnlineRides = useMutation(api.rides.deleteAllMyRides);
   const [localSettings, setLocalSettings] = useState<UserSettings | null>(null);
   const [thresholds, setThresholds] = useState<IncidentThresholds>(defaultSettings.incidentThresholds);
   const [demoSeeded, setDemoSeeded] = useState(false);
+  const [deletingRides, setDeletingRides] = useState(false);
   const { setTheme, colors } = useTheme();
   const styles = useAppStyles();
 
@@ -69,6 +71,45 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
   const handleSeedDemo = async () => {
     await seedDemoRide();
     setDemoSeeded(true);
+  };
+
+  const handleDeleteAllRides = () => {
+    if (deletingRides) return;
+
+    Alert.alert(
+      'Izbrisi vse voznje?',
+      'Izbrisane bodo lokalne in online testne voznje skupaj z GPS tockami in incidenti.',
+      [
+        { text: 'Preklici', style: 'cancel' },
+        {
+          text: 'Izbrisi',
+          style: 'destructive',
+          onPress: () => {
+            void deleteAllRideData();
+          },
+        },
+      ],
+    );
+  };
+
+  const deleteAllRideData = async () => {
+    setDeletingRides(true);
+
+    try {
+      const [onlineResult] = await Promise.all([
+        deleteOnlineRides(),
+        clearAllRides(),
+      ]);
+      setDemoSeeded(false);
+      Alert.alert(
+        'Voznje izbrisane',
+        `Online: ${onlineResult.deletedRides} vozenj, ${onlineResult.deletedPoints} GPS tock, ${onlineResult.deletedIncidents} incidentov. Lokalni podatki so izbrisani.`,
+      );
+    } catch {
+      Alert.alert('Brisanje ni uspelo', 'Preveri povezavo s Convexom in poskusi znova.');
+    } finally {
+      setDeletingRides(false);
+    }
   };
 
   return (
@@ -229,6 +270,13 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
             subtitle="Za testiranje zgodovine in izzivih"
             Icon={Info}
             onPress={demoSeeded ? undefined : handleSeedDemo}
+          />
+          <SettingsRow
+            title={deletingRides ? 'Brisem voznje ...' : 'Izbrisi vse voznje'}
+            subtitle="Lokalno in online, skupaj s tockami in incidenti"
+            Icon={Trash2}
+            trailing={deletingRides ? <ActivityIndicator size="small" color={RED} /> : undefined}
+            onPress={handleDeleteAllRides}
           />
           <SettingsRow title="O aplikaciji" subtitle="VozimVarno v1.0.0" Icon={Info} />
 
