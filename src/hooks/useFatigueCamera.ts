@@ -29,6 +29,7 @@ export function useFatigueCamera() {
       const analysis = await analyzeFrame(photo.uri);
       if (!analysis) {
         console.log('[FatigueCamera] no analysis result');
+        pushFatigueResult(null);
         return;
       }
 
@@ -36,7 +37,10 @@ export function useFatigueCamera() {
         ? closedEyeStreakRef.current + 1
         : Math.max(0, closedEyeStreakRef.current - 1);
 
-      const fatigue = faceAnalysisToFatigue(analysis, closedEyeStreakRef.current);
+      const fatigue = faceAnalysisToFatigue(analysis, closedEyeStreakRef.current, {
+        width: photo.width,
+        height: photo.height,
+      });
       console.log('[FatigueCamera] fatigue result:', JSON.stringify(fatigue));
       pushFatigueResult(fatigue);
     } catch (e) {

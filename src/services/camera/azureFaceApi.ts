@@ -10,12 +10,23 @@ type AzureFaceAttributes = {
   headPose?: { pitch: number; roll: number; yaw: number };
 };
 
-type AzureFaceResponse = Array<{ faceAttributes: AzureFaceAttributes }>;
+type AzureFaceRectangle = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+type AzureFaceResponse = Array<{
+  faceAttributes: AzureFaceAttributes;
+  faceRectangle?: AzureFaceRectangle;
+}>;
 
 export type FaceAnalysis = {
   eyeOccluded: boolean;
   headPitchDeg: number; // pozitivno = glava pada naprej (zaspanost)
   headTiltDeg: number;  // absolutni yaw
+  faceRectangle?: AzureFaceRectangle;
 };
 
 export async function analyzeFrame(photoUri: string): Promise<FaceAnalysis | null> {
@@ -52,6 +63,7 @@ export async function analyzeFrame(photoUri: string): Promise<FaceAnalysis | nul
       eyeOccluded: attrs.occlusion?.eyeOccluded ?? false,
       headPitchDeg: attrs.headPose?.pitch ?? 0,
       headTiltDeg: Math.abs(attrs.headPose?.yaw ?? 0),
+      faceRectangle: faces[0].faceRectangle,
     };
     console.log('[AzureFace] result:', JSON.stringify(result));
     return result;
@@ -65,7 +77,8 @@ export async function analyzeFrame(photoUri: string): Promise<FaceAnalysis | nul
 export function faceAnalysisToFatigue(
   analysis: FaceAnalysis,
   occludedStreak: number,
-): { score: number; confidence: number } {
+  imageSize?: { width: number; height: number },
+): { score: number; confidence: number; faceBox?: { x: number; y: number; width: number; height: number } } {
   // Zakriti/zaprte oči = močan signal utrujenosti
   const eyeScore = analysis.eyeOccluded ? Math.min(80, 40 + occludedStreak * 20) : 0;
   // Glava pada naprej ali nazaj — absolutna vrednost, prag 8°
@@ -73,8 +86,28 @@ export function faceAnalysisToFatigue(
   const pitchScore = Math.max(0, Math.abs(analysis.headPitchDeg) - 8) * 2.5;
   // Nagib glave vstran > 12° = signal utrujenosti
   const tiltScore = Math.max(0, (analysis.headTiltDeg - 12) * 2);
+  const faceBox = normalizeFaceRectangle(analysis.faceRectangle, imageSize);
   return {
     score: Math.min(100, eyeScore + pitchScore + tiltScore),
     confidence: 0.8,
+    ...(faceBox ? { faceBox } : {}),
   };
+}
+
+function normalizeFaceRectangle(
+  rectangle?: AzureFaceRectangle,
+  imageSize?: { width: number; height: number },
+): { x: number; y: number; width: number; height: number } | undefined {
+  if (!rectangle || !imageSize?.width || !imageSize.height) return undefined;
+
+  return {
+    x: clamp01(rectangle.left / imageSize.width),
+    y: clamp01(rectangle.top / imageSize.height),
+    width: clamp01(rectangle.width / imageSize.width),
+    height: clamp01(rectangle.height / imageSize.height),
+  };
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }

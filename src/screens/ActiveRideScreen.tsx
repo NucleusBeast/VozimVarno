@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
-import { Camera, Mic } from 'lucide-react-native';
+import { Camera, Mic, X } from 'lucide-react-native';
 
 import { Header, PhoneFrame } from '../components/layout';
 import { MetricCard, SpeedGauge } from '../components/metrics';
@@ -9,7 +9,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { GREEN, RED, YELLOW } from '../constants';
 import { useFatigueCamera } from '../hooks/useFatigueCamera';
 import type { GpsStatus } from '../hooks/useRideSession';
-import type { FatigueResult } from '../services/camera';
+import type { FaceBox, FatigueResult } from '../services/camera';
 import { loadSettings } from '../services/storage/settingsStorage';
 import { useAppStyles } from '../styles';
 import type { GoToScreen, Incident } from '../types';
@@ -57,6 +57,7 @@ export function ActiveRideScreen({
   const styles = useAppStyles();
   const { cameraRef, start, azureEnabled } = useFatigueCamera();
   const [cameraPreviewEnabled, setCameraPreviewEnabled] = useState(true);
+  const [isCameraExpanded, setIsCameraExpanded] = useState(false);
 
   useEffect(() => {
     void start();
@@ -91,6 +92,31 @@ export function ActiveRideScreen({
 
   const fatigue = fatigueResult ? fatigueInfo(fatigueResult) : null;
   const noiseColor = noiseAlerts === 0 ? GREEN : noiseAlerts < 3 ? YELLOW : RED;
+  const faceBox = fatigueResult?.faceBox;
+
+  const renderCameraContent = (expanded = false) => (
+    <>
+      {cameraPreviewEnabled ? (
+        <CameraView
+          ref={cameraRef}
+          facing="front"
+          style={expanded ? localStyles.expandedCamera : styles.cameraPreview}
+        />
+      ) : (
+        <View style={[expanded ? localStyles.expandedCamera : styles.cameraPreview, styles.cameraPreviewOff]}>
+          <Camera color="#ffffff" size={expanded ? 34 : 24} />
+          <Text style={styles.cameraPreviewOffText}>Kamera izklopljena</Text>
+        </View>
+      )}
+      {cameraPreviewEnabled ? <FaceBoxOverlay faceBox={faceBox} /> : null}
+      <View style={styles.cameraPreviewBadge}>
+        <View style={styles.redDot} />
+        <Text style={styles.cameraPreviewBadgeText}>
+          {cameraPreviewEnabled ? (azureEnabled ? 'KAMERA + ML' : 'KAMERA') : 'OFF'}
+        </Text>
+      </View>
+    </>
+  );
 
   return (
     <PhoneFrame>
@@ -102,20 +128,12 @@ export function ActiveRideScreen({
         </View>
 
         <View style={styles.cameraPreviewCard}>
-          {cameraPreviewEnabled ? (
-            <CameraView ref={cameraRef} facing="front" style={styles.cameraPreview} />
-          ) : (
-            <View style={[styles.cameraPreview, styles.cameraPreviewOff]}>
-              <Camera color="#ffffff" size={24} />
-              <Text style={styles.cameraPreviewOffText}>Kamera izklopljena</Text>
-            </View>
-          )}
-          <View style={styles.cameraPreviewBadge}>
-            <View style={styles.redDot} />
-            <Text style={styles.cameraPreviewBadgeText}>
-              {cameraPreviewEnabled ? (azureEnabled ? 'KAMERA + ML' : 'KAMERA') : 'OFF'}
-            </Text>
-          </View>
+          {!isCameraExpanded ? renderCameraContent() : null}
+          <Pressable
+            accessibilityLabel="Odpri kamero"
+            style={localStyles.cameraOpenTarget}
+            onPress={() => setIsCameraExpanded(true)}
+          />
         </View>
 
         <SpeedGauge value={Math.round(currentSpeedKmh)} />
@@ -152,6 +170,81 @@ export function ActiveRideScreen({
         <View style={styles.flexSpacer} />
         <PrimaryButton title="Zakljuci voznjo" onPress={onEndRide} outline danger />
       </View>
+      <Modal
+        visible={isCameraExpanded}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setIsCameraExpanded(false)}
+      >
+        <SafeAreaView style={localStyles.expandedShell}>
+          <View style={localStyles.expandedCameraSurface}>{renderCameraContent(true)}</View>
+          <Pressable
+            accessibilityLabel="Zapri kamero"
+            style={localStyles.closeButton}
+            onPress={() => setIsCameraExpanded(false)}
+          >
+            <X size={22} color="#07122f" strokeWidth={2.5} />
+          </Pressable>
+        </SafeAreaView>
+      </Modal>
     </PhoneFrame>
   );
 }
+
+function FaceBoxOverlay({ faceBox }: { faceBox?: FaceBox }) {
+  if (!faceBox) return null;
+
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        localStyles.faceBox,
+        {
+          left: `${faceBox.x * 100}%`,
+          top: `${faceBox.y * 100}%`,
+          width: `${faceBox.width * 100}%`,
+          height: `${faceBox.height * 100}%`,
+        },
+      ]}
+    />
+  );
+}
+
+const localStyles = StyleSheet.create({
+  cameraOpenTarget: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  expandedShell: {
+    flex: 1,
+    backgroundColor: '#07122f',
+  },
+  expandedCameraSurface: {
+    flex: 1,
+    backgroundColor: '#111827',
+    overflow: 'hidden',
+  },
+  expandedCamera: {
+    width: '100%',
+    height: '100%',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 56,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#dce3ee',
+  },
+  faceBox: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: '#23b54b',
+    borderRadius: 6,
+    backgroundColor: 'rgba(35, 181, 75, 0.12)',
+  },
+});

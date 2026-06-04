@@ -3,6 +3,14 @@ import { AZURE_FACE_AVAILABLE } from './azureFaceApi';
 export type FatigueResult = {
   score: number;       // 0 = alert, 100 = very fatigued
   confidence: number;  // 0–1
+  faceBox?: FaceBox;
+};
+
+export type FaceBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 
 export type MLCameraFrame = unknown;
@@ -53,7 +61,7 @@ export function disableFatigueDetection(): void {
   notify(null);
 }
 
-export function pushFatigueResult(result: FatigueResult): void {
+export function pushFatigueResult(result: FatigueResult | null): void {
   if (!isEnabled) return;
   currentResult = result;
   notify(result);
