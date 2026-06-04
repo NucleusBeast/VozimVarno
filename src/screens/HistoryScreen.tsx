@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { useMutation, useQuery } from 'convex/react';
 
@@ -29,22 +29,27 @@ function formatRideDate(timestamp: number): string {
 
 export function HistoryScreen({ go }: { go: GoToScreen }) {
   const [storedRides, setStoredRides] = useState<Ride[]>([]);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('vse');
-  const lastSyncKeyRef = useRef<string>('');
   const { isAuthenticated } = useConvexAuth();
   const convexRides = useQuery(api.rides.history);
   const syncLocalRide = useMutation(api.rides.syncLocalRide);
   const styles = useAppStyles();
 
-  useEffect(() => {
-    getRides().then(setStoredRides);
+  const loadStoredRides = useCallback(async () => {
+    const rides = await getRides();
+    setStoredRides(rides);
+    return rides;
   }, []);
 
-  const ridesNeedingSync = useMemo(() => {
-    if (!isAuthenticated || convexRides === undefined) return storedRides;
+  useEffect(() => {
+    void loadStoredRides();
+  }, [loadStoredRides]);
+
+  const getRidesNeedingSync = useCallback((rides: Ride[]) => {
+    if (!isAuthenticated || convexRides === undefined) return [];
     const convexByClientId = new Map(convexRides.map((ride) => [ride.clientRideId, ride]));
-    return storedRides.filter((ride) => {
+    return rides.filter((ride) => {
       const convexRide = convexByClientId.get(ride.id);
       return (
         !convexRide ||
@@ -52,35 +57,24 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
         (convexRide.userComment ?? '') !== (ride.userComment ?? '')
       );
     });
-  }, [convexRides, isAuthenticated, storedRides]);
+  }, [convexRides, isAuthenticated]);
 
-  useEffect(() => {
-    if (!isAuthenticated || convexRides === undefined || ridesNeedingSync.length === 0) return;
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    const minVisibleTime = wait(1000);
 
-    const syncKey = ridesNeedingSync.map((ride) => `${ride.id}:${ride.userRating ?? ''}:${ride.userComment ?? ''}`).join('|');
-    if (lastSyncKeyRef.current === syncKey) return;
-    lastSyncKeyRef.current = syncKey;
+    try {
+      const latestRides = await loadStoredRides();
+      const ridesToSync = getRidesNeedingSync(latestRides);
 
-    let cancelled = false;
-    setIsSyncing(true);
-
-    async function syncRides() {
-      try {
-        for (const ride of ridesNeedingSync) {
-          if (cancelled) return;
-          await syncLocalRide(toRideSyncPayload(ride));
-        }
-      } finally {
-        if (!cancelled) setIsSyncing(false);
+      for (const ride of ridesToSync) {
+        await syncLocalRide(toRideSyncPayload(ride));
       }
+    } finally {
+      await minVisibleTime;
+      setRefreshing(false);
     }
-
-    void syncRides();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [convexRides, isAuthenticated, syncLocalRide, ridesNeedingSync]);
+  }, [getRidesNeedingSync, loadStoredRides, syncLocalRide]);
 
   const filterRides = useCallback(
     (rides: RideSummary[]) => {
@@ -128,10 +122,17 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
     return [...storedRideSummaries, ...remoteOnlyRides].sort((a, b) => b.startTime - a.startTime);
   }, [remoteOnlyRides, storedRideSummaries]);
 
-  const shouldSync = isAuthenticated && storedRides.length > 0 && (convexRides === undefined || ridesNeedingSync.length > 0);
-  const showSyncIndicator = isSyncing || shouldSync;
   const hasRealData = allRides.length > 0;
   const displayRides = filterRides(allRides);
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      colors={[BLUE]}
+      tintColor={BLUE}
+      progressBackgroundColor="#ffffff"
+    />
+  );
 
   const tabs: Array<{ key: Tab; label: string }> = [
     { key: 'vse', label: 'Vse' },
@@ -153,17 +154,13 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
           </Pressable>
         ))}
       </View>
-      {showSyncIndicator ? (
-        <View style={styles.syncStatusRow}>
-          <ActivityIndicator size="small" color={BLUE} animating={isSyncing} hidesWhenStopped={false} />
-          <Text style={styles.syncStatusText}>
-            {isSyncing ? 'Sinhronizacija vozenj ...' : 'Sinhronizacija caka ...'}
-          </Text>
-        </View>
-      ) : null}
 
       {hasRealData ? (
-        <ScrollView contentContainerStyle={styles.historyList} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.historyList}
+          refreshControl={refreshControl}
+          showsVerticalScrollIndicator={false}
+        >
           {displayRides.length === 0 ? (
             <Text style={styles.emptyState}>Ni vozenj v izbranem obdobju.</Text>
           ) : (
@@ -185,7 +182,11 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
           )}
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.historyList} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.historyList}
+          refreshControl={refreshControl}
+          showsVerticalScrollIndicator={false}
+        >
           {rideHistory.map((ride) => (
             <Pressable key={ride.date} style={styles.historyItem} onPress={() => go('details')}>
               <View>
@@ -203,4 +204,8 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
       <BottomNav active="history" go={go} />
     </PhoneFrame>
   );
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
