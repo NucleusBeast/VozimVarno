@@ -91,6 +91,7 @@ export type IncidentThresholds = {
   hardBrakingMs2: number;
   sharpTurnDegS: number;
   noiseAlertDb: number;
+  speedLimitKmh: number;
 };
 
 export type UserSettings = {

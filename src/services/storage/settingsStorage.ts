@@ -16,6 +16,7 @@ export const defaultSettings: UserSettings = {
     hardBrakingMs2: 4.0,
     sharpTurnDegS: 45,
     noiseAlertDb: -20,
+    speedLimitKmh: 130,
   },
 };
 

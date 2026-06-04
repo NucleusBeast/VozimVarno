@@ -1,1 +1,0 @@
- ERROR  saveRide: NAPAKA [AsyncStorageError: Native module is null, cannot access legacy storage]

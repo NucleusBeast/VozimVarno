@@ -113,6 +113,9 @@ export function useRideSession(): RideSession {
         speedRef.current = sample.point.speedKmh;
         setCurrentSpeedKmh(sample.point.speedKmh);
         setGpsStatus((sample.accuracy ?? 999) <= 25 ? 'good' : 'poor');
+
+        const speedIncident = detectorRef.current.processSpeed(sample.point.speedKmh, sample.point);
+        if (speedIncident) addIncident(speedIncident);
       },
     );
   }, [stopLocationTracking]);

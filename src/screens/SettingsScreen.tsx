@@ -207,6 +207,16 @@ export function SettingsScreen({ go }: { go: GoToScreen }) {
                 updateThreshold('noiseAlertDb', Math.min(-5, thresholds.noiseAlertDb + 5))
               }
             />
+            <ThresholdRow
+              label="Omejitev hitrosti (km/h)"
+              value={thresholds.speedLimitKmh}
+              onDecrement={() =>
+                updateThreshold('speedLimitKmh', Math.max(10, thresholds.speedLimitKmh - 10))
+              }
+              onIncrement={() =>
+                updateThreshold('speedLimitKmh', Math.min(200, thresholds.speedLimitKmh + 10))
+              }
+            />
           </View>
 
           <View style={styles.settingsSectionLabelWrap}>

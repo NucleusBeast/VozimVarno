@@ -8,8 +8,9 @@ import type { PermissionResponse } from 'expo-modules-core';
 import { Header, PhoneFrame } from '../components/layout';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { BLUE, GREEN, RED } from '../constants';
+import { loadSettings } from '../services/storage/settingsStorage';
 import { useAppStyles } from '../styles';
-import type { GoToScreen } from '../types';
+import type { GoToScreen, UserSettings } from '../types';
 
 type NativePermission = {
   granted: boolean;
@@ -38,7 +39,12 @@ const initialPermissions: PermissionState = {
 export function PrepareScreen({ go, startRide }: { go: GoToScreen; startRide: () => void }) {
   const [permissions, setPermissions] = useState<PermissionState>(initialPermissions);
   const [isChecking, setIsChecking] = useState(true);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
   const styles = useAppStyles();
+
+  useEffect(() => {
+    loadSettings().then(setSettings);
+  }, []);
 
   const refreshPermissions = useCallback(async () => {
     setIsChecking(true);
@@ -77,8 +83,19 @@ export function PrepareScreen({ go, startRide }: { go: GoToScreen; startRide: ()
     return () => subscription.remove();
   }, [refreshPermissions]);
 
-  const canStartRide = permissions.camera.granted && permissions.gps.granted && permissions.microphone.granted;
-  const mustOpenSettings = !permissions.camera.canAskAgain || !permissions.gps.canAskAgain || !permissions.microphone.canAskAgain || !permissions.gps.servicesEnabled;
+  const cameraRequired = settings?.cameraEnabled ?? true;
+  const micRequired = settings?.microphoneEnabled ?? true;
+
+  const canStartRide =
+    (!cameraRequired || permissions.camera.granted) &&
+    permissions.gps.granted &&
+    (!micRequired || permissions.microphone.granted);
+
+  const mustOpenSettings =
+    (cameraRequired && !permissions.camera.canAskAgain) ||
+    !permissions.gps.canAskAgain ||
+    (micRequired && !permissions.microphone.canAskAgain) ||
+    !permissions.gps.servicesEnabled;
 
   const permissionStatus = (permission: NativePermission, deniedText = 'Ni dovoljeno') => {
     if (isChecking || permission.status === 'checking') {
@@ -93,7 +110,12 @@ export function PrepareScreen({ go, startRide }: { go: GoToScreen; startRide: ()
   };
 
   const checks = useMemo(() => [
-    { label: 'Kamera', status: permissionStatus(permissions.camera), enabled: permissions.camera.granted, Icon: Camera },
+    {
+      label: 'Kamera',
+      status: cameraRequired ? permissionStatus(permissions.camera) : 'Izklopljeno v nastavitvah',
+      enabled: cameraRequired ? permissions.camera.granted : true,
+      Icon: Camera,
+    },
     {
       label: 'GPS',
       status: permissions.gps.servicesEnabled ? permissionStatus(permissions.gps) : 'Lokacijske storitve so izklopljene',
@@ -101,9 +123,14 @@ export function PrepareScreen({ go, startRide }: { go: GoToScreen; startRide: ()
       Icon: MapPin,
     },
     { label: 'Pospeskometer', status: 'Povezano', enabled: true, Icon: Gauge },
-    { label: 'Mikrofon', status: permissionStatus(permissions.microphone), enabled: permissions.microphone.granted, Icon: Mic },
+    {
+      label: 'Mikrofon',
+      status: micRequired ? permissionStatus(permissions.microphone) : 'Izklopljeno v nastavitvah',
+      enabled: micRequired ? permissions.microphone.granted : true,
+      Icon: Mic,
+    },
     { label: 'Shranjevanje', status: 'Dovoljeno', enabled: true, Icon: Shield },
-  ], [isChecking, permissions]);
+  ], [isChecking, permissions, cameraRequired, micRequired]);
 
   const requestMissingPermissions = async () => {
     if (mustOpenSettings) {
@@ -114,7 +141,7 @@ export function PrepareScreen({ go, startRide }: { go: GoToScreen; startRide: ()
     setIsChecking(true);
 
     try {
-      if (!permissions.camera.granted && permissions.camera.canAskAgain) {
+      if (cameraRequired && !permissions.camera.granted && permissions.camera.canAskAgain) {
         await ExpoCamera.Camera.requestCameraPermissionsAsync();
       }
 
@@ -122,7 +149,7 @@ export function PrepareScreen({ go, startRide }: { go: GoToScreen; startRide: ()
         await Location.requestForegroundPermissionsAsync();
       }
 
-      if (!permissions.microphone.granted && permissions.microphone.canAskAgain) {
+      if (micRequired && !permissions.microphone.granted && permissions.microphone.canAskAgain) {
         await ExpoCamera.Camera.requestMicrophonePermissionsAsync();
       }
 

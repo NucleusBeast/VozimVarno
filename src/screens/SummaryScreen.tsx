@@ -72,6 +72,7 @@ export function SummaryScreen({ go, ride: completedRide, elapsedSeconds = 0, rid
   const brakings = incidents.filter((i) => i.type === 'hard_braking').length;
   const turns = incidents.filter((i) => i.type === 'sharp_turn').length;
   const noises = incidents.filter((i) => i.type === 'noise_alert').length;
+  const speedExceeded = incidents.filter((i) => i.type === 'speed_exceeded').length;
 
   return (
     <PhoneFrame>
@@ -88,20 +89,17 @@ export function SummaryScreen({ go, ride: completedRide, elapsedSeconds = 0, rid
             ['Povprecna hitrost', ride ? formatSpeed(ride.avgSpeedKmh) : 'N/A'],
           ]}
         />
-        <Text style={styles.sectionTitle}>Dosezeni dogodki</Text>
+        <Text style={styles.sectionTitle}>Doseženi dogodki</Text>
         <InfoRows
           compact
           rows={[
-            ['Pospeski', String(accelerations)],
+            ['Pospeški', String(accelerations)],
             ['Zaviranja', String(brakings)],
-            ['Ostro zavijanje', String(turns)],
-            ['Hrup opozorila', String(noises)],
-            ['GPS tocke', `${points.length}`],
-            ['Najvisja hitrost', ride ? formatSpeed(ride.maxSpeedKmh) : 'N/A'],
+            ['Odstopanja hitrosti', String(speedExceeded)],
           ]}
         />
         <View style={styles.flexSpacer} />
-        <PrimaryButton title="Oceni voznjo" onPress={() => go('rating')} />
+        <PrimaryButton title="Shrani voznjo" onPress={() => go('rating')} />
       </View>
     </PhoneFrame>
   );

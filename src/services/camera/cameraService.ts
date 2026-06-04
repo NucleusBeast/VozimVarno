@@ -1,14 +1,16 @@
+import { AZURE_FACE_AVAILABLE } from './azureFaceApi';
+
 export type FatigueResult = {
   score: number;       // 0 = alert, 100 = very fatigued
   confidence: number;  // 0–1
 };
 
-// Placeholder type for future ML camera frame input
 export type MLCameraFrame = unknown;
 
 let isEnabled = false;
 let mockInterval: ReturnType<typeof setInterval> | null = null;
 let currentResult: FatigueResult | null = null;
+let sessionStartTime = 0;
 const listeners = new Set<(result: FatigueResult | null) => void>();
 
 function notify(result: FatigueResult | null): void {
@@ -18,12 +20,25 @@ function notify(result: FatigueResult | null): void {
 export function enableFatigueDetection(): void {
   if (isEnabled) return;
   isEnabled = true;
-  currentResult = { score: 12, confidence: 0.65 };
+
+  if (AZURE_FACE_AVAILABLE) {
+    // Realni rezultati bodo potisneni prek pushFatigueResult iz useFatigueCamera hooka
+    currentResult = null;
+    return;
+  }
+
+  // Demo fallback: utrujenost se gradi s časom
+  sessionStartTime = Date.now();
+  currentResult = { score: 8, confidence: 0.72 };
   notify(currentResult);
-  // Mock: simulate ML inference updates every 8 seconds
+
   mockInterval = setInterval(() => {
-    const score = Math.max(0, Math.min(100, 10 + Math.random() * 40));
-    currentResult = { score, confidence: 0.55 + Math.random() * 0.35 };
+    const elapsedMin = (Date.now() - sessionStartTime) / 60000;
+    const baseFatigue = Math.min(65, elapsedMin * 8);
+    const spike = Math.random() < 0.15 ? 15 + Math.random() * 20 : 0;
+    const noise = (Math.random() - 0.5) * 10;
+    const score = Math.max(0, Math.min(100, baseFatigue + spike + noise));
+    currentResult = { score, confidence: 0.58 + Math.random() * 0.34 };
     notify(currentResult);
   }, 8000);
 }
@@ -38,6 +53,12 @@ export function disableFatigueDetection(): void {
   notify(null);
 }
 
+export function pushFatigueResult(result: FatigueResult): void {
+  if (!isEnabled) return;
+  currentResult = result;
+  notify(result);
+}
+
 export function isFatigueDetectionEnabled(): boolean {
   return isEnabled;
 }
@@ -48,11 +69,10 @@ export function getFatigueResult(): FatigueResult | null {
 
 export function onFatigueUpdate(listener: (result: FatigueResult | null) => void): () => void {
   listeners.add(listener);
-  listener(currentResult); // deliver current value immediately
+  listener(currentResult);
   return () => listeners.delete(listener);
 }
 
-// Replace body with actual TensorFlow Lite / MediaPipe inference when model is ready
 export function processCameraFrame(_frame: MLCameraFrame): FatigueResult | null {
   return null;
 }

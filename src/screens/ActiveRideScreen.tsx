@@ -1,10 +1,12 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Text, View } from 'react-native';
+import { CameraView } from 'expo-camera';
 
 import { Header, PhoneFrame } from '../components/layout';
 import { MetricCard, SpeedGauge } from '../components/metrics';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { GREEN, RED, YELLOW } from '../constants';
+import { useFatigueCamera } from '../hooks/useFatigueCamera';
 import type { GpsStatus } from '../hooks/useRideSession';
 import type { FatigueResult } from '../services/camera';
 import { useAppStyles } from '../styles';
@@ -34,8 +36,8 @@ const GPS_COLOR: Record<GpsStatus, string> = {
 };
 
 function fatigueInfo(result: FatigueResult): { color: string; label: string } {
-  if (result.score < 30) return { color: GREEN, label: 'Utrujenost: V redu' };
-  if (result.score < 60) return { color: YELLOW, label: 'Utrujenost: Pozor' };
+  if (result.score < 10) return { color: GREEN, label: 'Utrujenost: V redu' };
+  if (result.score < 30) return { color: YELLOW, label: 'Utrujenost: Pozor' };
   return { color: RED, label: 'Utrujenost: Opozorilo!' };
 }
 
@@ -49,6 +51,11 @@ export function ActiveRideScreen({
   onEndRide,
 }: Props) {
   const styles = useAppStyles();
+  const { cameraRef, start, azureEnabled } = useFatigueCamera();
+
+  useEffect(() => {
+    void start();
+  }, [start]);
 
   const accelerations = useMemo(
     () => incidents.filter((i) => i.type === 'hard_acceleration').length,
@@ -58,8 +65,8 @@ export function ActiveRideScreen({
     () => incidents.filter((i) => i.type === 'hard_braking').length,
     [incidents],
   );
-  const turns = useMemo(
-    () => incidents.filter((i) => i.type === 'sharp_turn').length,
+  const speedExceeded = useMemo(
+    () => incidents.filter((i) => i.type === 'speed_exceeded').length,
     [incidents],
   );
   const noiseAlerts = useMemo(
@@ -72,6 +79,13 @@ export function ActiveRideScreen({
 
   return (
     <PhoneFrame>
+      {azureEnabled && (
+        <CameraView
+          ref={cameraRef}
+          facing="front"
+          style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
+        />
+      )}
       <Header title="Voznja v teku" go={go} />
       <View style={styles.activeBody}>
         <View style={styles.timerRow}>
@@ -82,9 +96,9 @@ export function ActiveRideScreen({
         <SpeedGauge value={Math.round(currentSpeedKmh)} />
 
         <View style={styles.metricGrid}>
-          <MetricCard label="Pospeski" value={String(accelerations)} />
+          <MetricCard label="Pospeški" value={String(accelerations)} />
           <MetricCard label="Zaviranja" value={String(brakings)} />
-          <MetricCard label="Zavoji" value={String(turns)} />
+          <MetricCard label="Odst. hitrosti" value={String(speedExceeded)} />
         </View>
 
         <View style={[styles.gpsRow, { marginBottom: 8 }]}>
