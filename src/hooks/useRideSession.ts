@@ -22,6 +22,7 @@ import {
 } from '../services/sensors';
 import { startNoiseMonitoring, stopNoiseMonitoring } from '../services/audio';
 import { saveRide } from '../services/storage/rideStorage';
+import { toRideSyncPayload } from '../services/storage/rideSync';
 import { defaultSettings, loadSettings } from '../services/storage/settingsStorage';
 import type { Incident, Ride, RidePoint } from '../types';
 import { api } from '../../backend/convex/_generated/api';
@@ -42,10 +43,7 @@ export type RideSession = {
 };
 
 export function useRideSession(): RideSession {
-  const createBackendRide = useMutation(api.rides.createRide);
-  const addBackendPoint = useMutation(api.rides.addPoint);
-  const addBackendIncident = useMutation(api.rides.addIncident);
-  const finishBackendRide = useMutation(api.rides.finishRide);
+  const syncLocalRide = useMutation(api.rides.syncLocalRide);
 
   const [isActive, setIsActive] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -122,47 +120,11 @@ export function useRideSession(): RideSession {
 
   const syncRideToBackend = useCallback(async (ride: Ride) => {
     try {
-      const rideId = await createBackendRide({ startTime: ride.startTime });
-
-      for (const point of ride.points) {
-        await addBackendPoint({
-          rideId,
-          latitude: point.latitude,
-          longitude: point.longitude,
-          speedKmh: point.speedKmh,
-          timestamp: point.timestamp,
-          altitude: point.altitude,
-        });
-      }
-
-      for (const incident of ride.incidents) {
-        await addBackendIncident({
-          rideId,
-          type: incident.type,
-          timestamp: incident.timestamp,
-          intensity: incident.intensity,
-          speedKmh: incident.speedKmh,
-          latitude: incident.latitude,
-          longitude: incident.longitude,
-        });
-      }
-
-      await finishBackendRide({
-        rideId,
-        endTime: ride.endTime,
-        durationSeconds: ride.durationSeconds,
-        distanceKm: ride.distanceKm,
-        score: ride.score,
-        maxSpeedKmh: ride.maxSpeedKmh,
-        avgSpeedKmh: ride.avgSpeedKmh,
-        weatherCondition: ride.weather?.condition,
-        temperatureC: ride.weather?.temperatureC,
-        windSpeedKmh: ride.weather?.windSpeedKmh,
-      });
+      await syncLocalRide(toRideSyncPayload(ride));
     } catch {
       // Local ride storage is the source of truth for offline demo flow.
     }
-  }, [addBackendIncident, addBackendPoint, createBackendRide, finishBackendRide]);
+  }, [syncLocalRide]);
 
   const start = useCallback(async () => {
     if (timerRef.current) clearInterval(timerRef.current);

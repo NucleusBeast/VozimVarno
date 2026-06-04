@@ -490,6 +490,21 @@ function buildStyles(c: ColorPalette) {
       paddingHorizontal: 24,
       paddingBottom: 16,
     },
+    syncStatusRow: {
+      minHeight: 38,
+      paddingHorizontal: 24,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+      borderBottomWidth: 1,
+      borderBottomColor: c.line,
+      backgroundColor: c.sectionBg,
+    },
+    syncStatusText: {
+      color: c.textMuted,
+      fontSize: 12,
+      fontWeight: '800',
+    },
     emptyState: {
       textAlign: 'center',
       color: c.textMuted,

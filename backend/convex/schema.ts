@@ -20,6 +20,7 @@ export default defineSchema({
   }).index('userId', ['userId']),
   rides: defineTable({
     userId: v.id('users'),
+    clientRideId: v.optional(v.string()),
     startTime: v.number(),
     endTime: v.optional(v.number()),
     durationSeconds: v.number(),
@@ -27,6 +28,8 @@ export default defineSchema({
     score: v.number(),
     maxSpeedKmh: v.number(),
     avgSpeedKmh: v.number(),
+    userRating: v.optional(v.number()),
+    userComment: v.optional(v.string()),
     weatherCondition: v.optional(v.string()),
     temperatureC: v.optional(v.number()),
     windSpeedKmh: v.optional(v.number()),
@@ -34,6 +37,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index('userId', ['userId'])
+    .index('userId_clientRideId', ['userId', 'clientRideId'])
     .index('userId_startTime', ['userId', 'startTime']),
   ridePoints: defineTable({
     rideId: v.id('rides'),

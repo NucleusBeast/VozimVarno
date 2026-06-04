@@ -8,6 +8,8 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { useAppStyles } from '../styles';
 import type { GoToScreen } from '../types';
 
+const AUTH_TIMEOUT_MS = 15000;
+
 export function LoginScreen({ go }: { go: GoToScreen }) {
   const { signIn } = useAuthActions();
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
@@ -22,14 +24,22 @@ export function LoginScreen({ go }: { go: GoToScreen }) {
     setSubmitting(true);
 
     try {
-      await signIn('password', {
-        email: email.trim(),
-        password,
-        flow: mode,
-      });
+      await withTimeout(
+        signIn('password', {
+          email: email.trim(),
+          password,
+          flow: mode,
+        }),
+        AUTH_TIMEOUT_MS,
+      );
       go('home');
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : '';
+
+      if (message === 'auth_timeout') {
+        setError('Povezava s prijavo traja predolgo. Preveri internet in Convex nastavitev.');
+        return;
+      }
 
       if (mode === 'signUp' && message.includes('already exists')) {
         setMode('signIn');
@@ -67,4 +77,20 @@ export function LoginScreen({ go }: { go: GoToScreen }) {
       </View>
     </PhoneFrame>
   );
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => reject(new Error('auth_timeout')), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
 }

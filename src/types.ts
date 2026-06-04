@@ -81,11 +81,14 @@ export type Ride = {
 
 export type RideSummary = {
   id: string;
+  clientRideId?: string;
   startTime: number;
   durationSeconds: number;
   distanceKm: number;
   score: number;
   incidentCount: number;
+  userRating?: number;
+  userComment?: string;
 };
 
 export type IncidentThresholds = {

@@ -8,7 +8,7 @@ import { ConvexReactClient } from 'convex/react';
 import App from './App';
 import { ThemeProvider } from './src/theme/ThemeContext';
 
-const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL?.replace(/\/+$/, '');
 
 const memoryStorage: Record<string, string> = {};
 
