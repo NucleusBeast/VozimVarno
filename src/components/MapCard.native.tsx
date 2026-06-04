@@ -5,6 +5,7 @@ import MapView, { Marker, Polyline, type LatLng, type Region } from 'react-nativ
 import Svg, { Circle, Path, Polyline as SvgPolyline } from 'react-native-svg';
 
 import { GREEN, YELLOW } from '../constants';
+import { getRoadRouteForPoints } from '../services/api';
 import { useAppStyles } from '../styles';
 import type { Incident, RidePoint } from '../types';
 
@@ -21,12 +22,28 @@ export function MapCard({ points = [], incidents = [] }: { points?: RidePoint[];
   const [isMapReady, setIsMapReady] = useState(false);
   const [isExpandedMapReady, setIsExpandedMapReady] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [roadCoordinates, setRoadCoordinates] = useState<LatLng[] | null>(null);
   const coordinates = useMemo(() => pointsToCoordinates(points), [points]);
   const incidentCoordinates = useMemo(() => pointsToCoordinates(incidents.filter(hasValidCoordinates)), [incidents]);
+  const routeCoordinates = roadCoordinates && roadCoordinates.length >= 2 ? roadCoordinates : coordinates;
   const visibleCoordinates = useMemo(
-    () => [...coordinates, ...incidentCoordinates],
-    [coordinates, incidentCoordinates],
+    () => [...routeCoordinates, ...coordinates, ...incidentCoordinates],
+    [coordinates, incidentCoordinates, routeCoordinates],
   );
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    setRoadCoordinates(null);
+    void getRoadRouteForPoints(points).then((route) => {
+      if (!isCurrent) return;
+      setRoadCoordinates(route);
+    });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [points]);
 
   useEffect(() => {
     if (!isMapReady || visibleCoordinates.length < 2) return;
@@ -53,7 +70,7 @@ export function MapCard({ points = [], incidents = [] }: { points?: RidePoint[];
   const region = coordinatesToRegion(visibleCoordinates);
   const renderMapContent = () => (
     <>
-      <Polyline coordinates={coordinates} strokeColor="#1767b0" strokeWidth={5} />
+      <Polyline coordinates={routeCoordinates} strokeColor="#1767b0" strokeWidth={5} />
       {incidentCoordinates.map((coordinate, index) => (
         <Marker key={`${coordinate.latitude}-${coordinate.longitude}-${index}`} coordinate={coordinate} pinColor={YELLOW} />
       ))}

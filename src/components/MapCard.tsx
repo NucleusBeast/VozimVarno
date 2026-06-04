@@ -1,9 +1,10 @@
 import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 import { X } from 'lucide-react-native';
 import Svg, { Circle, Path, Polyline } from 'react-native-svg';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { GREEN, YELLOW } from '../constants';
+import { getRoadRouteForPoints, type RouteCoordinate } from '../services/api';
 import { useAppStyles } from '../styles';
 import type { Incident, RidePoint } from '../types';
 
@@ -16,16 +17,33 @@ type MaybeMapCoordinate = {
 export function MapCard({ points = [], incidents = [] }: { points?: RidePoint[]; incidents?: Incident[] }) {
   const styles = useAppStyles();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [roadCoordinates, setRoadCoordinates] = useState<RouteCoordinate[] | null>(null);
   const validPoints = points.filter(hasValidCoordinates);
   const incidentCoordinates = incidents.filter(hasValidCoordinates);
-  const project = createProjector([...validPoints, ...incidentCoordinates]);
-  const routePoints = project ? validPoints.map(project) : [];
+  const routeCoordinates = roadCoordinates && roadCoordinates.length >= 2 ? roadCoordinates : validPoints;
+  const project = createProjector([...routeCoordinates, ...validPoints, ...incidentCoordinates]);
+  const routePoints = project ? routeCoordinates.map(project) : [];
   const incidentPoints = project ? incidentCoordinates.map(project) : [];
   const polyline = routePoints.length > 1
     ? routePoints.map((point) => `${point.x},${point.y}`).join(' ')
     : '22,112 60,78 83,84 103,48 132,61 158,42 176,34 199,16 226,34';
-  const start = routePoints[0] ?? { x: 22, y: 112 };
-  const end = routePoints[routePoints.length - 1] ?? { x: 226, y: 34 };
+  const rawRoutePoints = project ? validPoints.map(project) : [];
+  const start = rawRoutePoints[0] ?? routePoints[0] ?? { x: 22, y: 112 };
+  const end = rawRoutePoints[rawRoutePoints.length - 1] ?? routePoints[routePoints.length - 1] ?? { x: 226, y: 34 };
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    setRoadCoordinates(null);
+    void getRoadRouteForPoints(points).then((route) => {
+      if (!isCurrent) return;
+      setRoadCoordinates(route);
+    });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [points]);
 
   const renderSvgMap = (width: number | string, height: number | string) => (
     <Svg width={width} height={height} viewBox="0 0 260 150">
