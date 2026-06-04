@@ -47,10 +47,24 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
 
   const getRidesNeedingSync = useCallback((rides: Ride[]) => {
     if (!isAuthenticated || convexRides === undefined) return [];
-    const syncedClientRideIds = new Set(convexRides.map((ride) => ride.clientRideId).filter(Boolean));
-    const syncedStartTimes = new Set(convexRides.map((ride) => ride.startTime));
-    return rides.filter((ride) => !syncedClientRideIds.has(ride.id) && !syncedStartTimes.has(ride.startTime));
+    return rides.filter((ride) => {
+      const remoteRide = convexRides.find((candidate) => {
+        return candidate.clientRideId === ride.id || candidate.startTime === ride.startTime;
+      });
+
+      if (!remoteRide) return true;
+      if (remoteRide.clientRideId !== ride.id) return true;
+      return (remoteRide.pointCount ?? 0) < ride.points.length;
+    });
   }, [convexRides, isAuthenticated]);
+
+  const syncRidesToRemote = useCallback(async (rides: Ride[]) => {
+    const ridesToSync = getRidesNeedingSync(rides);
+
+    for (const ride of ridesToSync) {
+      await syncLocalRide(toRideSyncPayload(ride));
+    }
+  }, [getRidesNeedingSync, syncLocalRide]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -58,16 +72,18 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
 
     try {
       const latestRides = await loadStoredRides();
-      const ridesToSync = getRidesNeedingSync(latestRides);
-
-      for (const ride of ridesToSync) {
-        await syncLocalRide(toRideSyncPayload(ride));
-      }
+      await syncRidesToRemote(latestRides);
     } finally {
       await minVisibleTime;
       setRefreshing(false);
     }
-  }, [getRidesNeedingSync, loadStoredRides, syncLocalRide]);
+  }, [loadStoredRides, syncRidesToRemote]);
+
+  useEffect(() => {
+    if (storedRides.length === 0 || convexRides === undefined) return;
+
+    void syncRidesToRemote(storedRides);
+  }, [convexRides, storedRides, syncRidesToRemote]);
 
   const filterRides = useCallback(
     (rides: RideSummary[]) => {
@@ -88,6 +104,7 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
       distanceKm: ride.distanceKm,
       score: ride.score,
       incidentCount: ride.incidents.length,
+      pointCount: ride.points.length,
       userRating: ride.userRating,
       userComment: ride.userComment,
     }));
@@ -104,6 +121,7 @@ export function HistoryScreen({ go }: { go: GoToScreen }) {
         distanceKm: ride.distanceKm,
         score: ride.score,
         incidentCount: ride.incidentCount,
+        pointCount: ride.pointCount,
         userRating: ride.userRating,
         userComment: ride.userComment,
       }));

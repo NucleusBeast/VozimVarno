@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 
 import { Header, PhoneFrame } from '../components/layout';
 import { InfoRows, MapCard, MetricCard } from '../components/metrics';
 import { BLUE, YELLOW } from '../constants';
 import { getRideById } from '../services/storage/rideStorage';
+import { toRideSyncPayload } from '../services/storage/rideSync';
 import { formatDuration } from '../utils/formatDuration';
 import { useAppStyles } from '../styles';
 import type { GoToScreen, Ride } from '../types';
@@ -24,6 +25,7 @@ function formatRideDate(timestamp: number): string {
 
 export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string }) {
   const remoteRide = useQuery(api.rides.detailsByIdentifier, rideId ? { rideIdentifier: rideId } : 'skip');
+  const syncLocalRide = useMutation(api.rides.syncLocalRide);
   const [localRide, setLocalRide] = useState<Ride | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const styles = useAppStyles();
@@ -43,6 +45,14 @@ export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string 
     void loadLocalRide();
   }, [loadLocalRide]);
 
+  useEffect(() => {
+    if (!localRide) return;
+    if (remoteRide === undefined) return;
+    if (remoteRide && remoteRide.points.length >= localRide.points.length) return;
+
+    void syncLocalRide(toRideSyncPayload(localRide));
+  }, [localRide, remoteRide, syncLocalRide]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     const minVisibleTime = wait(1000);
@@ -55,7 +65,7 @@ export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string 
     }
   }, [loadLocalRide]);
 
-  const ride = (remoteRide ?? localRide) as Ride | null;
+  const ride = selectBestRide(remoteRide as Ride | null | undefined, localRide);
   const points = ride?.points ?? [];
   const incidents = ride?.incidents ?? [];
 
@@ -76,7 +86,7 @@ export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string 
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.dateCenter}>{ride ? formatRideDate(ride.startTime) : 'Vožnja ni najdena'}</Text>
-        <MapCard points={points} />
+        <MapCard points={points} incidents={incidents} />
         <View style={styles.metricGrid}>
           <MetricCard label="Razdalja" value={ride ? `${ride.distanceKm.toFixed(2)} km` : '0,00 km'} />
           <MetricCard label="Cas voznje" value={ride ? formatDuration(ride.durationSeconds) : '00:00'} />
@@ -127,6 +137,13 @@ export function DetailsScreen({ go, rideId }: { go: GoToScreen; rideId?: string 
       </ScrollView>
     </PhoneFrame>
   );
+}
+
+function selectBestRide(remoteRide: Ride | null | undefined, localRide: Ride | null): Ride | null {
+  if (!remoteRide) return localRide;
+  if (!localRide) return remoteRide;
+  if (remoteRide.points.length < localRide.points.length) return localRide;
+  return remoteRide;
 }
 
 function wait(ms: number): Promise<void> {

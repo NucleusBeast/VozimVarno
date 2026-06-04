@@ -283,10 +283,16 @@ export const history = query({
 
     return Promise.all(
       rides.map(async (ride) => {
-        const incidents = await ctx.db
-          .query('rideIncidents')
-          .withIndex('rideId', (q) => q.eq('rideId', ride._id))
-          .collect();
+        const [points, incidents] = await Promise.all([
+          ctx.db
+            .query('ridePoints')
+            .withIndex('rideId', (q) => q.eq('rideId', ride._id))
+            .collect(),
+          ctx.db
+            .query('rideIncidents')
+            .withIndex('rideId', (q) => q.eq('rideId', ride._id))
+            .collect(),
+        ]);
 
         return {
           id: ride._id,
@@ -296,6 +302,7 @@ export const history = query({
           distanceKm: ride.distanceKm,
           score: ride.score,
           incidentCount: incidents.length,
+          pointCount: points.length,
           userRating: ride.userRating,
           userComment: ride.userComment,
         };

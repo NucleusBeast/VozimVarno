@@ -87,6 +87,7 @@ export type RideSummary = {
   distanceKm: number;
   score: number;
   incidentCount: number;
+  pointCount?: number;
   userRating?: number;
   userComment?: string;
 };
