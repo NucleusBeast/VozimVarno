@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 import { Star } from 'lucide-react-native';
 
 import { Header, PhoneFrame } from '../components/layout';
@@ -12,7 +22,7 @@ import { useTheme } from '../theme/ThemeContext';
 import type { GoToScreen, Ride } from '../types';
 
 export function RatingScreen({ go, ride }: { go: GoToScreen; ride: Ride | null }) {
-  const [selectedRating, setSelectedRating] = useState(4);
+  const [selectedRating, setSelectedRating] = useState(5);
   const [comment, setComment] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const styles = useAppStyles();
@@ -39,38 +49,52 @@ export function RatingScreen({ go, ride }: { go: GoToScreen; ride: Ride | null }
   return (
     <PhoneFrame>
       <Header title="Ocenjevanje" back="summary" go={go} />
-      <View style={styles.content}>
-        <View style={styles.centerBlock}>
-          <ScoreRing value={ride?.score ?? 0} size={124} stroke={9} />
-          <Text style={styles.ratingQuestion}>Kako varno si vozil?</Text>
-        </View>
-        <View style={styles.starRow}>
-          {[1, 2, 3, 4, 5].map((star) => (
-            <Pressable key={star} onPress={() => setSelectedRating(star)}>
-              <Star
-                size={42}
-                color={star <= selectedRating ? YELLOW : colors.textMuted}
-                fill={star <= selectedRating ? YELLOW : 'none'}
-                strokeWidth={1.8}
-              />
-            </Pressable>
-          ))}
-        </View>
-        <TextInput
-          multiline
-          placeholder="Dodaj komentar (neobvezno)"
-          placeholderTextColor={colors.textMuted}
-          style={styles.commentBox}
-          value={comment}
-          onChangeText={setComment}
-        />
-        <View style={styles.flexSpacer} />
-        <PrimaryButton
-          title={isSaving ? 'Shranjujem...' : 'Shrani oceno'}
-          onPress={handleSave}
-          disabled={isSaving}
-        />
-      </View>
+      <KeyboardAvoidingView
+        style={styles.ratingKeyboardAvoider}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={styles.ratingContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.centerBlock}>
+              <ScoreRing value={ride?.score ?? 0} size={124} stroke={9} />
+              <Text style={styles.ratingQuestion}>Kako ti je bila vsec voznja?</Text>
+            </View>
+            <View style={styles.starRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Pressable key={star} onPress={() => setSelectedRating(star)}>
+                  <Star
+                    size={42}
+                    color={star <= selectedRating ? YELLOW : colors.textMuted}
+                    fill={star <= selectedRating ? YELLOW : 'none'}
+                    strokeWidth={1.8}
+                  />
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              multiline
+              blurOnSubmit
+              returnKeyType="done"
+              placeholder="Dodaj komentar (neobvezno)"
+              placeholderTextColor={colors.textMuted}
+              style={styles.commentBox}
+              value={comment}
+              onChangeText={setComment}
+              onSubmitEditing={Keyboard.dismiss}
+            />
+            <View style={styles.flexSpacer} />
+            <PrimaryButton
+              title={isSaving ? 'Shranjujem...' : 'Shrani oceno'}
+              onPress={handleSave}
+              disabled={isSaving}
+            />
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </PhoneFrame>
   );
 }

@@ -15,7 +15,9 @@ import { LoadingScreen } from './src/screens/LoadingScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { PrepareScreen } from './src/screens/PrepareScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
+import { RatingHistoryScreen } from './src/screens/RatingHistoryScreen';
 import { RatingScreen } from './src/screens/RatingScreen';
+import { ResultsScreen } from './src/screens/ResultsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
 import { SummaryScreen } from './src/screens/SummaryScreen';
@@ -91,12 +93,16 @@ export default function App() {
             rideId={params.rideId}
           />
         );
+      case 'results':
+        return <ResultsScreen go={go} />;
       case 'history':
         return <HistoryScreen go={go} />;
       case 'details':
         return <DetailsScreen go={go} rideId={params.rideId} />;
       case 'rating':
         return <RatingScreen go={go} ride={completedRide} />;
+      case 'ratingHistory':
+        return <RatingHistoryScreen go={go} />;
       case 'challenges':
         return <ChallengesScreen go={go} />;
       case 'profile':

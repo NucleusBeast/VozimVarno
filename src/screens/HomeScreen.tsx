@@ -11,8 +11,8 @@ export function HomeScreen({ go }: { go: GoToScreen }) {
   const cards: Array<{ label: string; Icon: IconType; screen: Screen }> = [
     { label: 'Nova voznja', Icon: Car, screen: 'prepare' },
     { label: 'Moje voznje', Icon: Clock3, screen: 'history' },
-    { label: 'Rezultati', Icon: Gauge, screen: 'summary' },
-    { label: 'Ocenjevanje', Icon: Star, screen: 'rating' },
+    { label: 'Rezultati', Icon: Gauge, screen: 'results' },
+    { label: 'Ocena', Icon: Star, screen: 'ratingHistory' },
     { label: 'Izzivi', Icon: Trophy, screen: 'challenges' },
     { label: 'Nastavitve', Icon: Settings, screen: 'settings' },
   ];

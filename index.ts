@@ -69,12 +69,15 @@ function Root() {
 
   return React.createElement(
     ConvexAuthProvider,
-    { client: convex, storage: authStorage },
-    React.createElement(
-      ThemeProvider,
-      null,
-      React.createElement(App),
-    ),
+    {
+      client: convex,
+      storage: authStorage,
+      children: React.createElement(
+        ThemeProvider,
+        null,
+        React.createElement(App),
+      ),
+    },
   );
 }
 
