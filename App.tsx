@@ -77,6 +77,7 @@ export default function App() {
             currentSpeedKmh={rideSession.currentSpeedKmh}
             gpsStatus={rideSession.gpsStatus}
             fatigueResult={rideSession.fatigueResult}
+            microphoneActive={rideSession.microphoneActive}
             onEndRide={async () => {
               const ride = await rideSession.end();
               setCompletedRide(ride);

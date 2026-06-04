@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
+import { Camera, Mic } from 'lucide-react-native';
 
 import { Header, PhoneFrame } from '../components/layout';
 import { MetricCard, SpeedGauge } from '../components/metrics';
@@ -9,6 +10,7 @@ import { GREEN, RED, YELLOW } from '../constants';
 import { useFatigueCamera } from '../hooks/useFatigueCamera';
 import type { GpsStatus } from '../hooks/useRideSession';
 import type { FatigueResult } from '../services/camera';
+import { loadSettings } from '../services/storage/settingsStorage';
 import { useAppStyles } from '../styles';
 import type { GoToScreen, Incident } from '../types';
 import { formatDuration } from '../utils/formatDuration';
@@ -20,6 +22,7 @@ type Props = {
   currentSpeedKmh: number;
   gpsStatus: GpsStatus;
   fatigueResult: FatigueResult | null;
+  microphoneActive: boolean;
   onEndRide: () => void;
 };
 
@@ -48,14 +51,26 @@ export function ActiveRideScreen({
   currentSpeedKmh,
   gpsStatus,
   fatigueResult,
+  microphoneActive,
   onEndRide,
 }: Props) {
   const styles = useAppStyles();
   const { cameraRef, start, azureEnabled } = useFatigueCamera();
+  const [cameraPreviewEnabled, setCameraPreviewEnabled] = useState(true);
 
   useEffect(() => {
     void start();
   }, [start]);
+
+  useEffect(() => {
+    let mounted = true;
+    void loadSettings().then((settings) => {
+      if (mounted) setCameraPreviewEnabled(settings.cameraEnabled);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const accelerations = useMemo(
     () => incidents.filter((i) => i.type === 'hard_acceleration').length,
@@ -79,18 +94,28 @@ export function ActiveRideScreen({
 
   return (
     <PhoneFrame>
-      {azureEnabled && (
-        <CameraView
-          ref={cameraRef}
-          facing="front"
-          style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
-        />
-      )}
       <Header title="Voznja v teku" go={go} />
       <View style={styles.activeBody}>
         <View style={styles.timerRow}>
           <View style={styles.redDot} />
           <Text style={styles.timerText}>{formatDuration(elapsedSeconds)}</Text>
+        </View>
+
+        <View style={styles.cameraPreviewCard}>
+          {cameraPreviewEnabled ? (
+            <CameraView ref={cameraRef} facing="front" style={styles.cameraPreview} />
+          ) : (
+            <View style={[styles.cameraPreview, styles.cameraPreviewOff]}>
+              <Camera color="#ffffff" size={24} />
+              <Text style={styles.cameraPreviewOffText}>Kamera izklopljena</Text>
+            </View>
+          )}
+          <View style={styles.cameraPreviewBadge}>
+            <View style={styles.redDot} />
+            <Text style={styles.cameraPreviewBadgeText}>
+              {cameraPreviewEnabled ? (azureEnabled ? 'KAMERA + ML' : 'KAMERA') : 'OFF'}
+            </Text>
+          </View>
         </View>
 
         <SpeedGauge value={Math.round(currentSpeedKmh)} />
@@ -107,9 +132,13 @@ export function ActiveRideScreen({
         </View>
 
         <View style={[styles.gpsRow, { marginTop: 0, marginBottom: fatigue ? 8 : 28 }]}>
-          <View style={[styles.greenDot, { backgroundColor: noiseColor }]} />
+          <Mic color={microphoneActive ? noiseColor : RED} size={16} />
           <Text style={styles.gpsText}>
-            {noiseAlerts === 0 ? 'Hrup: Tiho' : `Hrup: ${noiseAlerts} opozorilo${noiseAlerts === 1 ? '' : 'v'}`}
+            {microphoneActive
+              ? noiseAlerts === 0
+                ? 'Mikrofon snema: Tiho'
+                : `Mikrofon snema: ${noiseAlerts} opozorilo${noiseAlerts === 1 ? '' : 'v'}`
+              : 'Mikrofon: Ni aktiven'}
           </Text>
         </View>
 

@@ -36,6 +36,7 @@ export type RideSession = {
   currentSpeedKmh: number;
   gpsStatus: GpsStatus;
   fatigueResult: FatigueResult | null;
+  microphoneActive: boolean;
   start: () => Promise<void>;
   end: () => Promise<Ride>;
   updateSpeed: (kmh: number) => void;
@@ -51,6 +52,7 @@ export function useRideSession(): RideSession {
   const [currentSpeedKmh, setCurrentSpeedKmh] = useState(0);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>('off');
   const [fatigueResult, setFatigueResult] = useState<FatigueResult | null>(null);
+  const [microphoneActive, setMicrophoneActive] = useState(false);
 
   const incidentsRef = useRef<Incident[]>([]);
   const pointsRef = useRef<RidePoint[]>([]);
@@ -63,6 +65,7 @@ export function useRideSession(): RideSession {
   const unsubFatigueRef = useRef<(() => void) | null>(null);
   const detectorRef = useRef(createIncidentDetector(defaultSettings.incidentThresholds));
   const micActiveRef = useRef(false);
+  const micStartTokenRef = useRef(0);
   const lastNoiseAlertRef = useRef(0);
 
   useEffect(() => {
@@ -135,6 +138,8 @@ export function useRideSession(): RideSession {
     unsubFatigueRef.current?.();
     unsubFatigueRef.current = null;
     micActiveRef.current = false;
+    micStartTokenRef.current += 1;
+    setMicrophoneActive(false);
     void stopNoiseMonitoring();
 
     const settings = await loadSettings();
@@ -154,6 +159,7 @@ export function useRideSession(): RideSession {
     setCurrentSpeedKmh(0);
     setGpsStatus('off');
     setFatigueResult(null);
+    setMicrophoneActive(false);
     setIsActive(true);
 
     timerRef.current = setInterval(() => {
@@ -187,7 +193,7 @@ export function useRideSession(): RideSession {
     if (settings.microphoneEnabled) {
       const noiseThreshold = settings.incidentThresholds.noiseAlertDb;
       const scale = Math.abs(noiseThreshold) || 20;
-      micActiveRef.current = true;
+      const micStartToken = ++micStartTokenRef.current;
       void startNoiseMonitoring((dbLevel) => {
         if (!micActiveRef.current) return;
         if (dbLevel < noiseThreshold) return;
@@ -203,7 +209,11 @@ export function useRideSession(): RideSession {
           latitude: latestPointRef.current?.latitude,
           longitude: latestPointRef.current?.longitude,
         });
-      }, noiseThreshold);
+      }, noiseThreshold).then((started) => {
+        if (micStartToken !== micStartTokenRef.current) return;
+        micActiveRef.current = started;
+        setMicrophoneActive(started);
+      });
     }
   }, [addIncident, startLocationTracking, stopLocationTracking]);
 
@@ -219,10 +229,13 @@ export function useRideSession(): RideSession {
     unsubFatigueRef.current?.();
     unsubFatigueRef.current = null;
     micActiveRef.current = false;
+    micStartTokenRef.current += 1;
+    setMicrophoneActive(false);
     void stopNoiseMonitoring();
 
     setIsActive(false);
     setFatigueResult(null);
+    setMicrophoneActive(false);
 
     const finalIncidents = incidentsRef.current;
     const finalPoints = pointsRef.current;
@@ -271,6 +284,8 @@ export function useRideSession(): RideSession {
       disableFatigueDetection();
       unsubFatigueRef.current?.();
       micActiveRef.current = false;
+      micStartTokenRef.current += 1;
+      setMicrophoneActive(false);
       void stopNoiseMonitoring();
     };
   }, [stopLocationTracking]);
@@ -282,6 +297,7 @@ export function useRideSession(): RideSession {
     currentSpeedKmh,
     gpsStatus,
     fatigueResult,
+    microphoneActive,
     start,
     end,
     updateSpeed,
